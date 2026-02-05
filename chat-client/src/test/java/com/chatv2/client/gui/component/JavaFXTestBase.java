@@ -43,11 +43,18 @@ public abstract class JavaFXTestBase extends ApplicationTest {
     
     @BeforeEach
     public void setUp() throws Exception {
-        // Initialize JavaFX platform for testing if not already initialized
-        if (!Platform.isFxApplicationThread()) {
-            CountDownLatch latch = new CountDownLatch(1);
-            Platform.startup(() -> latch.countDown());
-            assertTrue(latch.await(5, java.util.concurrent.TimeUnit.SECONDS), "JavaFX platform should be initialized");
+        // Check if JavaFX platform is already initialized
+        try {
+            if (!Platform.isFxApplicationThread()) {
+                CountDownLatch latch = new CountDownLatch(1);
+                Platform.startup(() -> latch.countDown());
+                assertTrue(latch.await(5, java.util.concurrent.TimeUnit.SECONDS), "JavaFX platform should be initialized");
+            }
+        } catch (IllegalStateException e) {
+            // Toolkit already initialized, which is fine
+            if (!e.getMessage().contains("Toolkit already initialized")) {
+                throw e;
+            }
         }
     }
     

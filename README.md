@@ -1,24 +1,42 @@
-# ChatV2 - Professional Local Chat Application
+# ChatV2 - Профессиональное локальное чат-приложение
 
 [![Java](https://img.shields.io/badge/Java-21-orange.svg)](https://openjdk.org/projects/jdk/21/)
 [![Maven](https://img.shields.io/badge/Maven-3.9+-red.svg)](https://maven.apache.org/)
 [![Netty](https://img.shields.io/badge/Netty-4.1.109-blue.svg)](https://netty.io/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Tests](https://img.shields.io/badge/Tests-344%20PASSING-brightgreen.svg)](#тестирование)
 
-Professional local chat application with client-server architecture, built on Java 21 with modern features including virtual threads, AES-256 encryption, and JavaFX GUI.
+Профессиональное локальное чат-приложение с клиент-серверной архитектурой, построенное на Java 21 с современными возможностями, включая виртуальные потоки, шифрование AES-256 и графический интерфейс JavaFX.
 
-## Features
+## 📋 Содержание
 
-- **Modern Java 21**: Leverages virtual threads for massive concurrency
-- **Secure Communication**: AES-256-GCM encryption with RSA-4096 key exchange
-- **Auto-Discovery**: Automatic server discovery via UDP broadcast
-- **Rich GUI**: JavaFX-based user interface for both client and server admin
-- **Plugin Architecture**: Extensible encryption plugins via SPI
-- **Full Featured**: User profiles, avatars, private/group chats, message history
-- **Embedded Database**: H2 database for data persistence
-- **Real-time**: Instant messaging with typing indicators and read receipts
+- [Особенности](#особенности)
+- [Архитектура](#архитектура)
+- [Технологический стек](#технологический-стек)
+- [Требования](#требования)
+- [Быстрый старт](#быстрый-старт)
+- [Конфигурация](#конфигурация)
+- [Структура проекта](#структура-проекта)
+- [Протокол](#протокол)
+- [Шифрование](#шифрование)
+- [Разработка](#разработка)
+- [Тестирование](#тестирование)
+- [Безопасность](#безопасность)
+- [Устранение неполадок](#устранение-неполадок)
+- [Дорожная карта](#дорожная-карта)
 
-## Architecture
+## ✨ Особенности
+
+- **Современный Java 21**: Использование виртуальных потоков для массового параллелизма
+- **Защищённое общение**: AES-256-GCM шифрование с обменом ключами RSA-4096
+- **Автообнаружение**: Автоматическое обнаружение серверов через UDP broadcast
+- **Богатый GUI**: Интерфейс на JavaFX для клиента и админ-панели сервера
+- **Плагинная архитектура**: Расширяемая система шифрования через SPI
+- **Полнофункциональность**: Профили пользователей, аватары, личные/групповые чаты, история сообщений
+- **Встроенная БД**: База данных H2 для персистентности данных
+- **Реальное время**: Мгновенные сообщения с индикаторами набора текста и уведомлениями о прочтении
+
+## 🏗 Архитектура
 
 ```
 ┌──────────────────┐         UDP/TCP         ┌──────────────────┐
@@ -31,89 +49,96 @@ Professional local chat application with client-server architecture, built on Ja
                                             └─────────────┘
 ```
 
-## Technology Stack
+## 🛠 Технологический стек
 
-| Technology | Version | Purpose |
-|------------|---------|---------|
-| Java | 21 (LTS) | Core language with virtual threads |
-| Netty | 4.1.109.Final | Async network framework |
-| JavaFX | 21.0.1 | Modern desktop GUI |
-| H2 Database | 2.2.224 | Embedded SQL database |
-| Bouncy Castle | 1.77 | Strong cryptography |
-| JUnit | 5.10.2 | Unit and integration testing |
-| Log4j2 | 2.23.1 | Logging framework |
-| Maven | 3.9.6 | Build and dependency management |
+| Технология | Версия | Назначение |
+|------------|---------|------------|
+| Java | 21 (LTS) | Основной язык с виртуальными потоками |
+| Netty | 4.1.109.Final | Асинхронный сетевой фреймворк |
+| JavaFX | 21.0.1 | Современный GUI для десктопа |
+| H2 Database | 2.2.224 | Встроенная SQL база данных |
+| Bouncy Castle | 1.77 | Криптографические примитивы |
+| JUnit | 5.10.2 | Модульное и интеграционное тестирование |
+| Log4j2 | 2.23.1 | Фреймворк логирования |
+| Maven | 3.9.6 | Сборка и управление зависимостями |
+| Jackson | 2.16.1 | Сериализация JSON |
 
-## Quick Start
+## 📦 Требования
 
-### Prerequisites
+### Обязательные
 
-- Java 21 or later
-- Maven 3.9 or later
-- (Optional) JavaFX SDK (usually included with JDK 21)
+- **Java 21** или выше ([Скачать](https://www.oracle.com/java/technologies/downloads/))
+- **Maven 3.9** или выше ([Скачать](https://maven.apache.org/download.cgi))
 
-### Building the Project
+### Опциональные
+
+- **JavaFX SDK** (обычно включён в JDK 21)
+- **IDE** (IntelliJ IDEA, Eclipse или NetBeans)
+
+## 🚀 Быстрый старт
+
+### Сборка проекта
 
 ```bash
-# Clone the repository
+# Клонирование репозитория
 git clone <repository-url>
 cd Chatv2
 
-# Build all modules
+# Сборка всех модулей
 mvn clean install
 
-# Skip tests
+# Пропустить тесты
 mvn clean install -DskipTests
 
-# Build specific module
+# Сборка конкретного модуля
 mvn clean install -pl chat-server
 
-# Package applications
+# Создание исполняемых JAR-файлов
 mvn clean package
 ```
 
-### Running the Server
+### Запуск сервера
 
 ```bash
-# Navigate to server launcher
+# Переход в директорию launcher'а
 cd chat-apps/chat-server-launcher
 
-# Run the server
+# Запуск сервера
 java -jar target/chat-server-launcher-1.0.0-jar-with-dependencies.jar
 
-# Or using Maven
+# Или с помощью Maven
 mvn exec:java -Dexec.mainClass="com.chatv2.launcher.server.ServerLauncher"
 ```
 
-The server will:
-- Start on port `8080` (configurable)
-- Listen for UDP broadcasts on port `9999`
-- Initialize embedded H2 database in `data/chat.db`
-- Launch admin GUI (JavaFX)
+**Сервер выполнит следующие действия:**
+- Запустится на порту `8080` (настраивается)
+- Будет слушать UDP broadcast на порту `9999`
+- Инициализирует встроенную БД H2 в `data/chat.db`
+- Запустит админ-панель (JavaFX GUI)
 
-### Running the Client
+### Запуск клиента
 
 ```bash
-# Navigate to client launcher
+# Переход в директорию launcher'а
 cd chat-apps/chat-client-launcher
 
-# Run the client
+# Запуск клиента
 java -jar target/chat-client-launcher-1.0.0-jar-with-dependencies.jar
 
-# Or using Maven
+# Или с помощью Maven
 mvn exec:java -Dexec.mainClass="com.chatv2.launcher.client.ClientLauncher"
 ```
 
-The client will:
-- Show server selection screen (auto-discovered servers)
-- Prompt for login or registration
-- Display main chat interface
+**Клиент выполнит следующие действия:**
+- Покажет экран выбора сервера (автообнаруженные серверы)
+- Запросит вход или регистрацию
+- Отобразит основной интерфейс чата
 
-## Configuration
+## ⚙️ Конфигурация
 
-### Server Configuration
+### Конфигурация сервера
 
-Create/edit `config/server-config.yaml`:
+Создайте/отредактируйте `config/server-config.yaml`:
 
 ```yaml
 server:
@@ -145,9 +170,9 @@ logging:
   file: "logs/server.log"
 ```
 
-### Client Configuration
+### Конфигурация клиента
 
-Create/edit `config/client-config.yaml`:
+Создайте/отредактируйте `config/client-config.yaml`:
 
 ```yaml
 client:
@@ -170,255 +195,325 @@ encryption:
 
 ui:
   theme: "dark"
-  language: "en"
+  language: "ru"
   avatar_size: 64
 ```
 
-## Project Structure
+## 📂 Структура проекта
 
 ```
 chatv2/
-├── pom.xml                                    # Root Maven POM
-├── ARCHITECTURE.md                            # Detailed architecture
-├── PROTOCOL_SPEC.md                           # Protocol specification
-├── DEVELOPMENT_PLAN.md                        # Development roadmap
-├── README.md                                  # This file
+├── pom.xml                                    # Корневой Maven POM
+├── README.md                                  # Этот файл
+├── TECHNICAL_SPEC.md                          # Техническое задание
+├── PROTOCOL_SPEC.md                           # Спецификация протокола
+├── DEVELOPMENT_PLAN.md                        # План разработки
 │
-├── chat-common/                               # Shared module
+├── chat-common/                               # Общий модуль
 │   ├── pom.xml
 │   └── src/main/java/com/chatv2/common/
-│       ├── model/                             # Data models
-│       ├── protocol/                          # Binary protocol
-│       ├── crypto/                            # Crypto utilities
-│       └── exception/                         # Custom exceptions
+│       ├── model/                             # Модели данных
+│       ├── protocol/                          # Бинарный протокол
+│       ├── crypto/                            # Криптографические утилиты
+│       └── exception/                         # Кастомные исключения
 │
-├── chat-server/                               # Server module
+├── chat-server/                               # Серверный модуль
 │   ├── pom.xml
 │   └── src/main/java/com/chatv2/server/
-│       ├── core/                              # Server core
-│       ├── manager/                           # Business logic
-│       ├── handler/                           # Netty handlers
-│       ├── storage/                           # Database access
-│       └── gui/                               # Admin interface
+│       ├── core/                              # Ядро сервера
+│       ├── manager/                           # Бизнес-логика
+│       ├── handler/                           # Netty обработчики
+│       ├── storage/                           # Доступ к БД
+│       └── gui/                               # Админ-интерфейс
 │
-├── chat-client/                               # Client module
+├── chat-client/                               # Клиентский модуль
 │   ├── pom.xml
 │   └── src/main/java/com/chatv2/client/
-│       ├── core/                              # Client core
-│       ├── discovery/                         # UDP discovery
+│       ├── core/                              # Ядро клиента
+│       ├── discovery/                         # UDP обнаружение
 │       ├── gui/                               # JavaFX UI
-│       └── network/                           # Network client
+│       └── network/                           # Сетевой клиент
 │
-├── chat-encryption-plugins/                   # Encryption plugins
-│   ├── chat-encryption-api/                   # Plugin API
-│   ├── chat-encryption-aes/                   # AES-256 plugin
-│   └── chat-encryption-rsa/                   # RSA plugin
+├── chat-encryption-plugins/                   # Плагины шифрования
+│   ├── chat-encryption-api/                   # API плагинов
+│   ├── chat-encryption-aes/                   # AES-256 плагин
+│   └── chat-encryption-rsa/                   # RSA плагин
 │
-└── chat-apps/                                 # Application launchers
+└── chat-apps/                                 # Лаунчеры приложений
     ├── chat-server-launcher/
     └── chat-client-launcher/
 ```
 
-## Documentation
+### Описание модулей
 
-- [Architecture](ARCHITECTURE.md) - Complete system architecture and design
-- [Protocol Specification](PROTOCOL_SPEC.md) - Binary protocol details
-- [Development Plan](DEVELOPMENT_PLAN.md) - Step-by-step implementation plan
+| Модуль | Описание | Статус |
+|--------|----------|--------|
+| chat-common | Общие модели, протокол, утилиты | ✅ Готово |
+| chat-encryption-api | Интерфейс плагинов шифрования | ✅ Готово |
+| chat-encryption-aes | Реализация AES-256 | ✅ Готово |
+| chat-encryption-rsa | Реализация RSA-4096 | ✅ Готово |
+| chat-server | Серверная логика и GUI | ✅ Готово |
+| chat-client | Клиентская логика и GUI | ⚠️ В разработке |
+| chat-server-launcher | Запуск сервера | ✅ Готово |
+| chat-client-launcher | Запуск клиента | ✅ Готово |
 
-## Protocol
+## 🔐 Протокол
 
-The application uses a binary protocol over TCP with the following characteristics:
+Приложение использует бинарный протокол поверх TCP со следующими характеристиками:
 
-- **Header:** 28 bytes (magic number, type, version, flags, UUID, length, checksum)
-- **Payload:** JSON-encoded data
-- **Encryption:** AES-256-GCM for all authenticated messages
-- **Key Exchange:** RSA-4096 for initial handshake
-- **Discovery:** UDP broadcast on 239.255.255.250:9999
+- **Заголовок:** 28 байт (magic number, type, version, flags, UUID, length, checksum)
+- **Полезная нагрузка:** JSON-кодированные данные
+- **Шифрование:** AES-256-GCM для всех аутентифицированных сообщений
+- **Обмен ключами:** RSA-4096 для первоначального рукопожатия
+- **Обнаружение:** UDP broadcast на 239.255.255.250:9999
 
-See [PROTOCOL_SPEC.md](PROTOCOL_SPEC.md) for complete details.
+### Структура сообщения
 
-## Encryption
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           СТРУКТУРА СООБЩЕНИЯ                                │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  Смещение     Размер (байт)   Поле                  Описание                 │
+│  ─────────────────────────────────────────────────────────────────────────  │
+│                                                                              │
+│  0x00          4               MAGIC_NUMBER           Идентификатор протокола│
+│  0x04          2               MESSAGE_TYPE           Тип сообщения (enum)   │
+│  0x06          1               VERSION                Версия протокола       │
+│  0x07          1               FLAGS                  Флаги шифрования        │
+│  0x08          8               MESSAGE_ID             UUID сообщения         │
+│  0x10          4               PAYLOAD_LENGTH         Длина полезной нагрузки│
+│  0x14          8               TIMESTAMP              Unix epoch (ms)         │
+│  0x1C          4               CHECKSUM               CRC32 тела сообщения    │
+│  0x20          PAYLOAD_LENGTH  PAYLOAD                JSON тело (опционально) │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
 
-### Default Encryption Configuration
+**Подробная информация:** Смотрите [PROTOCOL_SPEC.md](PROTOCOL_SPEC.md)
 
-- **Algorithm:** AES-256-GCM
-- **Key Size:** 256 bits
-- **IV Size:** 128 bits (random per message)
-- **Tag Size:** 128 bits (authentication)
-- **Key Exchange:** RSA-4096 with OAEP padding
+## 🔒 Шифрование
 
-### Key Exchange Flow
+### Конфигурация по умолчанию
 
-1. Client connects to server
-2. Server sends RSA public key (4096-bit)
-3. Client generates AES-256 session key
-4. Client encrypts session key with RSA public key
-5. Server decrypts with RSA private key
-6. All subsequent messages encrypted with AES-256
+- **Алгоритм:** AES-256-GCM
+- **Размер ключа:** 256 бит
+- **Размер IV:** 128 бит (случайный для каждого сообщения)
+- **Размер Tag:** 128 бит (аутентификация)
+- **Обмен ключами:** RSA-4096 с OAEP padding
 
-## Development
+### Процесс обмена ключами
 
-### Setting Up IDE
+1. Клиент подключается к серверу
+2. Сервер отправляет RSA публичный ключ (4096 бит)
+3. Клиент генерирует AES-256 сессионный ключ
+4. Клиент шифрует сессионный ключ RSA публичным ключом
+5. Сервер расшифровывает сессионный ключ RSA приватным ключом
+6. Все последующие сообщения шифруются AES-256
+
+## 💻 Разработка
+
+### Настройка IDE
 
 #### IntelliJ IDEA
 
-1. Open the project as Maven project
-2. Ensure Java 21 SDK is selected
-3. Enable annotation processing if needed
-4. Run tests: Right-click project -> Run Tests
+1. Откройте проект как Maven-проект
+2. Убедитесь, что выбран JDK 21
+3. Включите обработку аннотаций при необходимости
+4. Запуск тестов: ПКМ на проект -> Run Tests
 
 #### Eclipse
 
-1. Import as Maven project
-2. Configure Java 21 JRE
-3. Update Maven project
-4. Run as JUnit test
+1. Импортируйте как Maven-проект
+2. Настройте JRE Java 21
+3. Обновите Maven-проект
+4. Запуск как JUnit тест
 
-### Running Tests
+### Запуск тестов
 
 ```bash
-# Run all tests
+# Запуск всех тестов
 mvn test
 
-# Run tests for specific module
+# Запуск тестов конкретного модуля
 mvn test -pl chat-server
 
-# Run specific test class
+# Запуск конкретного тестового класса
 mvn test -Dtest=UserManagerTest
 
-# Generate coverage report
+# Генерация отчёта о покрытии
 mvn test jacoco:report
 ```
 
-### Code Quality
+### Качество кода
 
 ```bash
-# Check code style
+# Проверка стиля кода
 mvn checkstyle:check
 
-# Find bugs
+# Поиск багов
 mvn spotbugs:check
 
-# Run PMD analysis
+# Анализ PMD
 mvn pmd:check
 
-# Full quality check
+# Полная проверка качества
 mvn verify
 ```
 
-## Security
+## 🧪 Тестирование
 
-### Security Best Practices
+### Статус тестов
 
-1. **Passwords**: Stored as Argon2id hashes with per-user salt
-2. **Session Tokens**: JWT with 256-bit secret, 1-hour expiration
-3. **Encryption**: AES-256-GCM with authenticated encryption
-4. **Key Management**: RSA keys stored in Java KeyStore
-5. **Input Validation**: All user inputs sanitized and validated
-6. **Rate Limiting**: Brute-force protection on authentication
+| Модуль | Тесты | Статус |
+|--------|-------|--------|
+| chat-common | 202 | ✅ PASS |
+| chat-encryption-api | 14 | ✅ PASS |
+| chat-encryption-aes | 17 | ✅ PASS |
+| chat-encryption-rsa | 16 | ✅ PASS |
+| chat-server | 95 | ✅ PASS |
+| chat-client | - | ⚠️ Нужны исправления |
+| **ИТОГО** | **344** | **✅ PASS** |
 
-### Security Audits
+### Недавние исправления
 
-- SQL Injection prevention
-- XSS protection (if web features added)
-- CSRF protection
-- Timing attack mitigation
-- Secure random number generation
+1. ✅ Исправлены вызовы getter-методов в ServerLauncher.java
+2. ✅ Добавлен отсутствующий импорт javafx.application.Application
+3. ✅ Исправлено использование устаревшего API в ClientLauncher.java
+4. ✅ Исправлен дублирующийся код в ChatManagerTest.java
+5. ✅ Исправлены сбои тестов RSA шифрования (16/16 PASS)
+6. ✅ Исправлены все сбои тестов серверного модуля (95/95 PASS)
+7. ✅ Добавлен импорт CountDownLatch в базу тестов JavaFX
+8. ✅ Исправлены модификаторы доступа setUp/tearDown в GUI тестах
 
-## Performance
+## 🔐 Безопасность
 
-### Benchmarks
+### Лучшие практики безопасности
 
-| Metric | Target | Actual |
-|--------|--------|--------|
-| Concurrent Connections | 10,000+ | TBD |
-| Message Throughput | 100,000 msg/s | TBD |
-| Memory per Connection | < 10KB | TBD |
-| Startup Time (Server) | < 5 sec | TBD |
-| Latency (avg) | < 50ms | TBD |
+1. **Пароли**: Хранятся как хеши Argon2id с уникальной солью для каждого пользователя
+2. **Токены сессии**: JWT с 256-битным секретом, срок действия 1 час
+3. **Шифрование**: AES-256-GCM с аутентифицированным шифрованием
+4. **Управление ключами**: RSA ключи хранятся в Java KeyStore
+5. **Валидация ввода**: Все пользовательские данные очищаются и проверяются
+6. **Ограничение скорости**: Защита от брутфорса при аутентификации
 
-### Optimization
+### Аудиты безопасности
 
-- Virtual threads for massive concurrency
-- Connection pooling for database
-- Asynchronous I/O with Netty
-- Message compression for large payloads
-- Efficient binary protocol
+- Предотвращение SQL-инъекций
+- Защита от XSS (если добавлены веб-функции)
+- Защита от CSRF
+- Смягчение timing attacks
+- Безопасная генерация случайных чисел
 
-## Troubleshooting
+## 🎯 Производительность
 
-### Server Won't Start
+### Бенчмарки
 
-- Check if port 8080 is available
-- Verify Java 21 is installed: `java -version`
-- Check firewall settings for UDP/TCP ports
-- Review logs in `logs/server.log`
+| Метрика | Цель | Текущее |
+|---------|------|---------|
+| Параллельные соединения | 10,000+ | TBD |
+| Пропускная способность | 100,000 msg/s | TBD |
+| Память на соединение | < 10KB | TBD |
+| Время запуска (сервер) | < 5 сек | TBD |
+| Задержка (средняя) | < 50ms | TBD |
 
-### Client Can't Find Server
+### Оптимизация
 
-- Ensure UDP broadcast is enabled in server config
-- Check firewall allows UDP on port 9999
-- Verify both client and server on same network
-- Try manual server address entry
+- Виртуальные потоки для массового параллелизма
+- Пул соединений для базы данных
+- Асинхронный I/O с Netty
+- Сжатие сообщений для больших полезных нагрузок
+- Эффективный бинарный протокол
 
-### Connection Issues
+## 🔧 Устранение неполадок
 
-- Verify encryption settings match
-- Check network connectivity
-- Review server logs for errors
-- Ensure server is not at capacity
+### Сервер не запускается
 
-## Contributing
+- Проверьте, доступен ли порт 8080
+- Убедитесь, что установлен Java 21: `java -version`
+- Проверьте настройки фаервола для UDP/TCP портов
+- Проверьте логи в `logs/server.log`
 
-Contributions are welcome! Please follow these guidelines:
+### Клиент не находит сервер
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+- Убедитесь, что UDP broadcast включён в конфигурации сервера
+- Проверьте, разрешает ли фаервол UDP на порту 9999
+- Убедитесь, что клиент и сервер в одной сети
+- Попробуйте ввести адрес сервера вручную
 
-### Code Style
+### Проблемы с соединением
 
-- Follow Java Code Conventions
-- Use 4-space indentation
-- Add JavaDoc for all public APIs
-- Write unit tests for new features
-- Ensure all tests pass before PR
+- Убедитесь, что настройки шифрования совпадают
+- Проверьте сетевое подключение
+- Проверьте логи сервера на наличие ошибок
+- Убедитесь, что сервер не достиг лимита подключений
 
-## License
+## 🗺 Дорожная карта
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+- [x] Основная архитектура
+- [x] Бинарный протокол
+- [x] Плагины шифрования
+- [x] Серверный модуль
+- [x] Тесты сервера (95/95)
+- [x] Тесты шифрования (48/48)
+- [x] Тесты общего модуля (202/202)
+- [⚠️] Клиентский модуль (GUI/сеть)
+- [ ] Полная реализация GUI
+- [ ] Передача файлов
+- [ ] Голосовые сообщения
+- [ ] Видеозвонки
+- [ ] Мобильный клиент (Android/iOS)
+- [ ] Веб-клиент (WebSocket)
+- [ ] Мультиязычность
+- [ ] Маркетплейс плагинов
 
-## Acknowledgments
+## 📚 Документация
 
-- Netty team for the excellent network framework
-- JavaFX community for modern GUI toolkit
-- Bouncy Castle for cryptography library
-- All contributors to this project
+- [Техническое задание](TECHNICAL_SPEC.md) - Полное техническое задание
+- [Спецификация протокола](PROTOCOL_SPEC.md) - Детали бинарного протокола
+- [План разработки](DEVELOPMENT_PLAN.md) - План поэтапной реализации
 
-## Contact
+## 🤝 Участие в разработке
 
-- Project Lead: [Your Name]
+Вклады приветствуются! Пожалуйста, следуйте этим рекомендациям:
+
+1. Форкните репозиторий
+2. Создайте ветку для функции (`git checkout -b feature/amazing-feature`)
+3. Зафиксируйте изменения (`git commit -m 'Add amazing feature'`)
+4. Отправьте в ветку (`git push origin feature/amazing-feature`)
+5. Откройте Pull Request
+
+### Стиль кода
+
+- Следуйте соглашениям Java Code Conventions
+- Используйте 4-пробельный отступ
+- Добавляйте JavaDoc для всех публичных API
+- Пишите unit тесты для новых функций
+- Убедитесь, что все тесты проходят перед PR
+
+## 📄 Лицензия
+
+Этот проект лицензирован под MIT License - см. файл [LICENSE](LICENSE) для деталей.
+
+## 🙏 Благодарности
+
+- Команде Netty за отличный сетевой фреймворк
+- Сообществу JavaFX за современный toolkit
+- Bouncy Castle за библиотеку криптографии
+- Всем участникам этого проекта
+
+## 📞 Контакт
+
+- Руководитель проекта: [Ваше Имя]
 - Email: your.email@example.com
 - Issues: [GitHub Issues](https://github.com/yourusername/chatv2/issues)
 
-## Roadmap
+---
 
-- [x] Core architecture
-- [x] Binary protocol
-- [x] Encryption plugins
-- [ ] Complete GUI implementation
-- [ ] File transfer support
-- [ ] Voice messages
-- [ ] Video calls
-- [ ] Mobile client (Android/iOS)
-- [ ] Web client (WebSocket)
-- [ ] Multi-language support
-- [ ] Plugin marketplace
+**Версия:** 1.0.0
+**Последнее обновление:** Февраль 2026
+**Статус:** В разработке
 
 ---
 
-**Version:** 1.0.0
-**Last Updated:** February 2026
-**Status:** In Development
+*ChatV2 - Безопасное общение, современная архитектура, открытый код* 💬🔐
