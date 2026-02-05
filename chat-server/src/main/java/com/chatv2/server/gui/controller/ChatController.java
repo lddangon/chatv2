@@ -60,8 +60,15 @@ public class ChatController {
      */
     public void setMainApp(ServerAdminApp mainApp) {
         this.mainApp = mainApp;
-        this.chatManager = mainApp.getDatabaseManager().getChatManager();
-        this.userManager = mainApp.getDatabaseManager().getUserManager();
+        // Safely get database manager - may not be initialized yet
+        try {
+            if (ServerAdminApp.getDatabaseManager() != null) {
+                this.chatManager = ServerAdminApp.getDatabaseManager().getChatManager();
+                this.userManager = ServerAdminApp.getDatabaseManager().getUserManager();
+            }
+        } catch (IllegalStateException e) {
+            log.warn("DatabaseManager not yet initialized: {}", e.getMessage());
+        }
     }
 
     /**
@@ -138,6 +145,12 @@ public class ChatController {
         Task<List<Chat>> loadTask = new Task<>() {
             @Override
             protected List<Chat> call() {
+                // Defensive check: Verify initialization before accessing dependencies
+                if (!ServerAdminApp.isInitialized() || mainApp == null) {
+                    log.warn("ServerAdminApp or mainApp not initialized yet, skipping chat load");
+                    return List.of();
+                }
+                
                 try {
                     List<Chat> allChats = mainApp.getDatabaseManager().getChatRepository().findAll();
                     log.debug("Found {} chats in database", allChats.size());
@@ -173,6 +186,12 @@ public class ChatController {
         Task<List<UserProfile>> loadTask = new Task<>() {
             @Override
             protected List<UserProfile> call() throws Exception {
+                // Defensive check: Verify initialization before accessing dependencies
+                if (!ServerAdminApp.isInitialized() || chatManager == null || userManager == null) {
+                    log.warn("ServerAdminApp, chatManager, or userManager not initialized yet, skipping participant load");
+                    return List.of();
+                }
+                
                 Set<UUID> participantIds = chatManager.getParticipants(chatId).get();
                 log.debug("Found {} participants for chat {}", participantIds.size(), chatId);
 

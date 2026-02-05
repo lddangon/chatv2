@@ -97,8 +97,12 @@ public class ServerAdminApp extends Application {
      * Gets the ChatServer instance.
      *
      * @return the ChatServer instance
+     * @throws IllegalStateException if ChatServer is not set
      */
     public static ChatServer getChatServer() {
+        if (chatServer == null) {
+            throw new IllegalStateException("ChatServer instance not set. Call setChatServer() before accessing.");
+        }
         return chatServer;
     }
 
@@ -106,8 +110,12 @@ public class ServerAdminApp extends Application {
      * Gets the DatabaseManager instance.
      *
      * @return the DatabaseManager instance
+     * @throws IllegalStateException if DatabaseManager is not set
      */
     public static DatabaseManager getDatabaseManager() {
+        if (databaseManager == null) {
+            throw new IllegalStateException("DatabaseManager instance not set. Call setDatabaseManager() before accessing.");
+        }
         return databaseManager;
     }
 
@@ -115,16 +123,45 @@ public class ServerAdminApp extends Application {
      * Gets the ServerConfig instance.
      *
      * @return the ServerConfig instance
+     * @throws IllegalStateException if ServerConfig is not set
      */
     public static ServerConfig getServerConfig() {
+        if (serverConfig == null) {
+            throw new IllegalStateException("ServerConfig instance not set. Call setServerConfig() before accessing.");
+        }
         return serverConfig;
+    }
+
+    /**
+     * Checks if all required dependencies have been set.
+     * This can be called by controllers to verify initialization.
+     *
+     * @return true if all dependencies are set, false otherwise
+     */
+    public static boolean isInitialized() {
+        return chatServer != null && databaseManager != null && serverConfig != null;
     }
 
     @Override
     public void init() throws Exception {
         log.debug("Initializing ServerAdminApp");
 
-        // Validate that dependencies are set
+        // Defensive check: Verify initialization status before proceeding
+        if (!isInitialized()) {
+            String missingComponents = new StringBuilder()
+                .append(chatServer == null ? "ChatServer " : "")
+                .append(databaseManager == null ? "DatabaseManager " : "")
+                .append(serverConfig == null ? "ServerConfig" : "")
+                .toString();
+            
+            log.warn("ServerAdminApp initialization incomplete. Missing dependencies: {}. "
+                + "This indicates a race condition where Application.launch() was called before setters completed.",
+                missingComponents);
+            log.warn("Skipping initialization. Controllers should check isInitialized() before accessing dependencies.");
+            return;
+        }
+
+        // Additional validation that dependencies are set (redundant but explicit)
         if (chatServer == null) {
             throw new IllegalStateException("ChatServer instance not set. Call setChatServer() before launching GUI.");
         }
@@ -134,6 +171,8 @@ public class ServerAdminApp extends Application {
         if (serverConfig == null) {
             throw new IllegalStateException("ServerConfig instance not set. Call setServerConfig() before launching GUI.");
         }
+
+        log.info("ServerAdminApp initialization completed successfully with all dependencies set");
     }
 
     @Override

@@ -5,6 +5,8 @@ import com.chatv2.server.core.ChatServer;
 import com.chatv2.server.gui.ServerAdminApp;
 import com.chatv2.server.gui.model.ServerStatistics;
 import com.chatv2.server.manager.UserManager;
+import com.chatv2.server.storage.DatabaseManager;
+import com.chatv2.server.manager.ChatManager;
 import com.chatv2.server.manager.ChatManager;
 import com.chatv2.server.manager.MessageManager;
 import com.chatv2.server.storage.UserRepository;
@@ -117,17 +119,30 @@ public class DashboardController {
             @Override
             protected Void call() {
                 try {
+                    // Check if ServerAdminApp is properly initialized
+                    if (!ServerAdminApp.isInitialized() || mainApp == null) {
+                        log.warn("ServerAdminApp or mainApp not initialized yet, skipping update");
+                        return null;
+                    }
+
                     ChatServer server = ServerAdminApp.getChatServer();
                     if (server == null) {
                         return null;
                     }
 
-                    UserManager userManager = mainApp.getDatabaseManager().getUserManager();
-                    ChatManager chatManager = mainApp.getDatabaseManager().getChatManager();
-                    MessageManager messageManager = mainApp.getDatabaseManager().getMessageManager();
-                    UserRepository userRepository = mainApp.getDatabaseManager().getUserRepository();
-                    ChatRepository chatRepository = mainApp.getDatabaseManager().getChatRepository();
-                    MessageRepository messageRepository = mainApp.getDatabaseManager().getMessageRepository();
+                    // Get database manager safely
+                    DatabaseManager dbManager = ServerAdminApp.getDatabaseManager();
+                    if (dbManager == null) {
+                        log.warn("DatabaseManager is null, skipping update");
+                        return null;
+                    }
+
+                    UserManager userManager = dbManager.getUserManager();
+                    ChatManager chatManager = dbManager.getChatManager();
+                    MessageManager messageManager = dbManager.getMessageManager();
+                    UserRepository userRepository = dbManager.getUserRepository();
+                    ChatRepository chatRepository = dbManager.getChatRepository();
+                    MessageRepository messageRepository = dbManager.getMessageRepository();
 
                     // Gather statistics
                     int userCount = userRepository.countAll();
@@ -173,6 +188,12 @@ public class DashboardController {
      * @param stats the server statistics
      */
     private void updateUI(ServerStatistics stats) {
+        // Defensive check: Verify initialization before accessing dependencies
+        if (!ServerAdminApp.isInitialized()) {
+            log.warn("ServerAdminApp not initialized yet, skipping UI update");
+            return;
+        }
+
         ChatServer server = ServerAdminApp.getChatServer();
 
         // Update server info
@@ -223,6 +244,18 @@ public class DashboardController {
     @FXML
     private void handleStartServer() {
         log.info("Start Server button clicked");
+        
+        // Defensive check: Verify initialization before accessing dependencies
+        if (!ServerAdminApp.isInitialized()) {
+            log.warn("ServerAdminApp not initialized yet, cannot start server");
+            mainApp.showErrorAlert(
+                "Initialization Error",
+                "Server Not Ready",
+                "The server is still initializing. Please wait a moment and try again."
+            );
+            return;
+        }
+        
         ChatServer server = ServerAdminApp.getChatServer();
 
         server.start().thenAccept(v -> {
@@ -249,6 +282,18 @@ public class DashboardController {
     @FXML
     private void handleStopServer() {
         log.info("Stop Server button clicked");
+        
+        // Defensive check: Verify initialization before accessing dependencies
+        if (!ServerAdminApp.isInitialized()) {
+            log.warn("ServerAdminApp not initialized yet, cannot stop server");
+            mainApp.showErrorAlert(
+                "Initialization Error",
+                "Server Not Ready",
+                "The server is still initializing. Please wait a moment and try again."
+            );
+            return;
+        }
+        
         ChatServer server = ServerAdminApp.getChatServer();
 
         server.stop().thenAccept(v -> {
@@ -274,6 +319,18 @@ public class DashboardController {
     @FXML
     private void handleRestartServer() {
         log.info("Restart Server button clicked");
+        
+        // Defensive check: Verify initialization before accessing dependencies
+        if (!ServerAdminApp.isInitialized()) {
+            log.warn("ServerAdminApp not initialized yet, cannot restart server");
+            mainApp.showErrorAlert(
+                "Initialization Error",
+                "Server Not Ready",
+                "The server is still initializing. Please wait a moment and try again."
+            );
+            return;
+        }
+        
         ChatServer server = ServerAdminApp.getChatServer();
 
         server.stop()

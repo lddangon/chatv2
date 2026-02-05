@@ -73,16 +73,32 @@ public class ServerLauncher {
             // Launch GUI if enabled
             if (guiMode) {
                 try {
-                    // Set static references for GUI
+                    // IMPORTANT: Set static references for GUI BEFORE launching JavaFX
+                    // These must be set before Application.launch() because JavaFX may
+                    // start initializing controllers immediately
+                    log.info("Setting up GUI dependencies...");
                     ServerAdminApp.setChatServer(chatServer);
                     ServerAdminApp.setDatabaseManager(databaseManager);
                     ServerAdminApp.setServerConfig(config);
+
+                    // Validate that all dependencies are set
+                    if (ServerAdminApp.getChatServer() == null) {
+                        throw new IllegalStateException("ChatServer not set in ServerAdminApp");
+                    }
+                    if (ServerAdminApp.getDatabaseManager() == null) {
+                        throw new IllegalStateException("DatabaseManager not set in ServerAdminApp");
+                    }
+                    if (ServerAdminApp.getServerConfig() == null) {
+                        throw new IllegalStateException("ServerConfig not set in ServerAdminApp");
+                    }
+                    log.info("GUI dependencies validated successfully");
 
                     // Launch JavaFX GUI
                     log.info("Launching GUI application...");
                     Application.launch(ServerAdminApp.class, args);
                 } catch (Exception e) {
                     log.error("Failed to launch GUI", e);
+                    log.error("GUI launch error: {}", e.getMessage());
                     // Continue running in headless mode
                     log.info("Continuing in headless mode");
                 }

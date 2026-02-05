@@ -51,7 +51,14 @@ public class UserController {
      */
     public void setMainApp(ServerAdminApp mainApp) {
         this.mainApp = mainApp;
-        this.userManager = mainApp.getDatabaseManager().getUserManager();
+        // Safely get database manager - may not be initialized yet
+        try {
+            if (ServerAdminApp.getDatabaseManager() != null) {
+                this.userManager = ServerAdminApp.getDatabaseManager().getUserManager();
+            }
+        } catch (IllegalStateException e) {
+            log.warn("DatabaseManager not yet initialized: {}", e.getMessage());
+        }
     }
 
     /**
@@ -117,6 +124,12 @@ public class UserController {
         Task<List<UserProfile>> loadTask = new Task<>() {
             @Override
             protected List<UserProfile> call() {
+                // Defensive check: Verify initialization before accessing dependencies
+                if (!ServerAdminApp.isInitialized() || mainApp == null) {
+                    log.warn("ServerAdminApp or mainApp not initialized yet, skipping user load");
+                    return List.of();
+                }
+                
                 try {
                     List<UUID> allUserIds = mainApp.getDatabaseManager().getUserRepository().findAll()
                         .stream()
@@ -162,6 +175,12 @@ public class UserController {
         Task<List<UserProfile>> searchTask = new Task<>() {
             @Override
             protected List<UserProfile> call() throws Exception {
+                // Defensive check: Verify initialization before accessing dependencies
+                if (!ServerAdminApp.isInitialized() || userManager == null) {
+                    log.warn("ServerAdminApp or userManager not initialized yet, skipping search");
+                    return List.of();
+                }
+                
                 return userManager.searchUsers(query, 100).get();
             }
 
@@ -212,6 +231,18 @@ public class UserController {
     @FXML
     private void handleDeleteUser() {
         log.debug("Delete User button clicked");
+        
+        // Defensive check: Verify initialization before proceeding
+        if (!ServerAdminApp.isInitialized()) {
+            log.warn("ServerAdminApp not initialized yet, cannot delete user");
+            mainApp.showErrorAlert(
+                "Initialization Error",
+                "Server Not Ready",
+                "The server is still initializing. Please wait a moment and try again."
+            );
+            return;
+        }
+        
         UserProfile selectedUser = userTable.getSelectionModel().getSelectedItem();
         if (selectedUser == null) {
             mainApp.showErrorAlert("Selection Error", "No User Selected", "Please select a user to delete.");
