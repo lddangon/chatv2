@@ -1,0 +1,29 @@
+# ChatV2 Client Configuration
+# This file contains client startup and runtime settings
+
+client:
+  name: "ChatV2 Client"
+  version: "1.0.0"
+
+# Server discovery via UDP multicast
+discovery:
+  enabled: true
+  multicastAddress: "239.255.255.250"
+  port: 9999
+  timeoutSeconds: 30
+
+# Connection settings
+connection:
+  reconnectAttempts: 5
+  reconnectDelaySeconds: 5
+  heartbeatIntervalSeconds: 30
+
+# Encryption settings
+encryption:
+  enabled: true
+
+# User interface settings
+ui:
+  theme: "dark"
+  language: "en"
+  avatarSize: 128

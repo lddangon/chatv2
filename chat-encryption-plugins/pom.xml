@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.chatv2</groupId>
+        <artifactId>chatv2-parent</artifactId>
+        <version>1.0.0</version>
+    </parent>
+
+    <artifactId>chat-encryption-plugins</artifactId>
+    <packaging>pom</packaging>
+
+    <name>ChatV2 Encryption Plugins</name>
+    <description>Encryption plugin modules with plugin architecture</description>
+
+    <modules>
+        <module>chat-encryption-api</module>
+        <module>chat-encryption-aes</module>
+        <module>chat-encryption-rsa</module>
+    </modules>
+
+</project>

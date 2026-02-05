@@ -1,0 +1,2 @@
+com.chatv2.encryption.aes.AesEncryptionPlugin
+com.chatv2.encryption.rsa.RsaEncryptionPlugin

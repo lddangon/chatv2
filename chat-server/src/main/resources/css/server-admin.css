@@ -1,0 +1,550 @@
+/**
+ * ChatV2 Server Admin - Dark Theme CSS
+ * Provides styling for the server administration interface.
+ */
+
+/* ==================== Root Pane ==================== */
+.root-pane {
+    -fx-background-color: #1e1e1e;
+}
+
+/* ==================== Sidebar ==================== */
+.sidebar {
+    -fx-background-color: #252526;
+    -fx-padding: 10px;
+    -fx-pref-width: 200px;
+    -fx-border-color: #3e3e42;
+    -fx-border-width: 0 1 0 0;
+}
+
+.app-title {
+    -fx-text-fill: #cccccc;
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+    -fx-alignment: center;
+}
+
+.nav-button {
+    -fx-background-color: transparent;
+    -fx-text-fill: #cccccc;
+    -fx-border-color: transparent;
+    -fx-border-width: 2px;
+    -fx-border-insets: 0 0 0 5px;
+    -fx-cursor: hand;
+    -fx-alignment: center-left;
+    -fx-padding: 10px 15px;
+}
+
+.nav-button:hover {
+    -fx-background-color: #3e3e42;
+    -fx-text-fill: #ffffff;
+}
+
+.nav-button:focused {
+    -fx-border-color: #0078d7;
+}
+
+.version-label {
+    -fx-text-fill: #858585;
+    -fx-font-size: 11px;
+    -fx-alignment: center;
+}
+
+/* ==================== Content Area ==================== */
+.content-area {
+    -fx-background-color: #1e1e1e;
+}
+
+/* ==================== Server Info Bar ==================== */
+.server-info-bar {
+    -fx-background-color: #2d2d2d;
+    -fx-border-color: #3e3e42;
+    -fx-border-width: 0 0 1 0;
+    -fx-padding: 10px 20px;
+}
+
+.info-label {
+    -fx-text-fill: #858585;
+    -fx-font-size: 11px;
+}
+
+.info-value {
+    -fx-text-fill: #ffffff;
+    -fx-font-size: 13px;
+}
+
+/* ==================== Statistics ==================== */
+.statistics-grid {
+    -fx-hgap: 20px;
+    -fx-vgap: 20px;
+}
+
+.stat-card {
+    -fx-background-color: #252526;
+    -fx-background-radius: 8px;
+    -fx-border-color: #3e3e42;
+    -fx-border-radius: 8px;
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.3), 5, 0, 0, 2);
+}
+
+.stat-label {
+    -fx-text-fill: #858585;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-text-transform: uppercase;
+}
+
+.stat-value {
+    -fx-text-fill: #4ec9b0;
+    -fx-font-size: 36px;
+    -fx-font-weight: bold;
+}
+
+/* ==================== Charts ==================== */
+.activity-chart {
+    -fx-background-color: transparent;
+    -fx-border-color: #3e3e42;
+    -fx-border-radius: 8px;
+    -fx-background-radius: 8px;
+    -fx-padding: 10px;
+}
+
+.section-title {
+    -fx-text-fill: #cccccc;
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+}
+
+/* ==================== Control Buttons ==================== */
+.control-bar {
+    -fx-background-color: #2d2d2d;
+    -fx-border-color: #3e3e42;
+    -fx-border-width: 1 0 0 0;
+    -fx-padding: 10px 20px;
+    -fx-spacing: 10px;
+}
+
+.control-button {
+    -fx-background-color: #0e639c;
+    -fx-text-fill: #ffffff;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-padding: 8px 20px;
+    -fx-background-radius: 4px;
+    -fx-cursor: hand;
+    -fx-border-radius: 4px;
+}
+
+.control-button:hover {
+    -fx-background-color: #1177bb;
+}
+
+.control-button:disabled {
+    -fx-opacity: 0.5;
+    -fx-cursor: default;
+}
+
+.start-button {
+    -fx-background-color: #388a34;
+}
+
+.start-button:hover {
+    -fx-background-color: #439a3f;
+}
+
+.stop-button {
+    -fx-background-color: #d13438;
+}
+
+.stop-button:hover {
+    -fx-background-color: #e6464a;
+}
+
+.restart-button {
+    -fx-background-color: #ca5010;
+}
+
+.restart-button:hover {
+    -fx-background-color: #da5d1e;
+}
+
+/* ==================== Tables ==================== */
+.user-table, .chat-table {
+    -fx-background-color: #1e1e1e;
+    -fx-border-color: #3e3e42;
+}
+
+.table-view {
+    -fx-background-color: #1e1e1e;
+}
+
+.table-view .column-header {
+    -fx-background-color: #2d2d2d;
+    -fx-border-color: #3e3e42;
+    -fx-border-width: 0 0 1 0;
+}
+
+.table-view .column-header .label {
+    -fx-text-fill: #cccccc;
+    -fx-font-weight: bold;
+}
+
+.table-view .table-row-cell {
+    -fx-text-fill: #cccccc;
+}
+
+.table-view .table-row-cell:selected {
+    -fx-background-color: #094771;
+    -fx-text-fill: #ffffff;
+}
+
+/* ==================== Search/Filter Bar ==================== */
+.search-bar, .refresh-bar, .filter-bar {
+    -fx-background-color: #2d2d2d;
+    -fx-border-color: #3e3e42;
+    -fx-border-width: 0 0 1 0;
+    -fx-padding: 10px 20px;
+}
+
+.search-field {
+    -fx-background-color: #3c3c3c;
+    -fx-text-fill: #cccccc;
+    -fx-border-color: #3e3e42;
+    -fx-border-radius: 4px;
+    -fx-background-radius: 4px;
+    -fx-prompt-text-fill: #858585;
+}
+
+.search-field:focused {
+    -fx-border-color: #0078d7;
+}
+
+/* ==================== Action Bar ==================== */
+.action-bar {
+    -fx-background-color: #2d2d2d;
+    -fx-border-color: #3e3e42;
+    -fx-border-width: 1 0 0 0;
+    -fx-padding: 10px 20px;
+}
+
+.action-button {
+    -fx-background-color: #0e639c;
+    -fx-text-fill: #ffffff;
+    -fx-font-size: 13px;
+    -fx-padding: 8px 16px;
+    -fx-background-radius: 4px;
+    -fx-cursor: hand;
+}
+
+.action-button:hover {
+    -fx-background-color: #1177bb;
+}
+
+.add-button {
+    -fx-background-color: #388a34;
+}
+
+.add-button:hover {
+    -fx-background-color: #439a3f;
+}
+
+.edit-button {
+    -fx-background-color: #ca5010;
+}
+
+.edit-button:hover {
+    -fx-background-color: #da5d1e;
+}
+
+.delete-button {
+    -fx-background-color: #d13438;
+}
+
+.delete-button:hover {
+    -fx-background-color: #e6464a;
+}
+
+/* ==================== Icon Buttons ==================== */
+.icon-button {
+    -fx-background-color: #3c3c3c;
+    -fx-text-fill: #cccccc;
+    -fx-font-size: 13px;
+    -fx-padding: 8px 16px;
+    -fx-background-radius: 4px;
+    -fx-cursor: hand;
+}
+
+.icon-button:hover {
+    -fx-background-color: #4c4c4c;
+}
+
+/* ==================== User Management ==================== */
+.user-management-pane, .chat-management-pane, .log-viewer-pane, .dashboard-pane {
+    -fx-background-color: #1e1e1e;
+}
+
+/* ==================== Chat Management ==================== */
+.chat-split-pane {
+    -fx-background-color: #1e1e1e;
+}
+
+.chat-split-pane .split-pane-divider {
+    -fx-padding: 0 5px;
+    -fx-background-color: #3e3e42;
+}
+
+.participants-pane {
+    -fx-background-color: #252526;
+    -fx-border-color: #3e3e42;
+    -fx-border-width: 0 0 0 1px;
+}
+
+.participants-header {
+    -fx-background-color: #2d2d2d;
+    -fx-padding: 10px;
+    -fx-border-color: #3e3e42;
+    -fx-border-width: 0 0 1 0;
+}
+
+.participants-list {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+.list-view {
+    -fx-background-color: #1e1e1e;
+    -fx-border-color: #3e3e42;
+}
+
+.list-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: #cccccc;
+    -fx-padding: 8px 10px;
+}
+
+.list-cell:selected {
+    -fx-background-color: #094771;
+    -fx-text-fill: #ffffff;
+}
+
+.view-button {
+    -fx-background-color: #0e639c;
+}
+
+.view-button:hover {
+    -fx-background-color: #1177bb;
+}
+
+/* ==================== Log Viewer ==================== */
+.log-text-area {
+    -fx-background-color: #0c0c0c;
+    -fx-text-fill: #cccccc;
+    -fx-font-family: "Consolas", "Monaco", "Courier New", monospace;
+    -fx-font-size: 12px;
+    -fx-border-color: #3e3e42;
+    -fx-border-radius: 4px;
+    -fx-background-radius: 4px;
+}
+
+.level-combobox {
+    -fx-background-color: #3c3c3c;
+    -fx-text-fill: #cccccc;
+    -fx-border-color: #3e3e42;
+    -fx-background-radius: 4px;
+}
+
+.level-combobox .list-cell {
+    -fx-text-fill: #cccccc;
+    -fx-background-color: #252526;
+}
+
+.level-combobox .list-cell:selected {
+    -fx-background-color: #094771;
+    -fx-text-fill: #ffffff;
+}
+
+.auto-scroll-checkbox {
+    -fx-text-fill: #cccccc;
+}
+
+.auto-scroll-checkbox .box {
+    -fx-background-color: #3c3c3c;
+    -fx-border-color: #3e3e42;
+}
+
+.auto-scroll-checkbox:selected .box {
+    -fx-background-color: #0078d7;
+    -fx-border-color: #0078d7;
+}
+
+.auto-scroll-checkbox:selected .mark {
+    -fx-background-color: #ffffff;
+}
+
+.clear-button {
+    -fx-background-color: #d13438;
+}
+
+.clear-button:hover {
+    -fx-background-color: #e6464a;
+}
+
+.refresh-button {
+    -fx-background-color: #0e639c;
+}
+
+.refresh-button:hover {
+    -fx-background-color: #1177bb;
+}
+
+.export-button {
+    -fx-background-color: #388a34;
+}
+
+.export-button:hover {
+    -fx-background-color: #439a3f;
+}
+
+.filter-label {
+    -fx-text-fill: #cccccc;
+    -fx-font-size: 13px;
+}
+
+/* ==================== ScrollBar ==================== */
+.scroll-bar {
+    -fx-background-color: #2d2d2d;
+}
+
+.scroll-bar .thumb {
+    -fx-background-color: #3e3e42;
+    -fx-background-radius: 4px;
+}
+
+.scroll-bar .thumb:hover {
+    -fx-background-color: #4e4e52;
+}
+
+/* ==================== ComboBox ==================== */
+.combo-box {
+    -fx-background-color: #3c3c3c;
+    -fx-text-fill: #cccccc;
+    -fx-border-color: #3e3e42;
+    -fx-background-radius: 4px;
+}
+
+.combo-box .list-cell {
+    -fx-text-fill: #cccccc;
+    -fx-background-color: #252526;
+}
+
+.combo-box .list-cell:selected {
+    -fx-background-color: #094771;
+    -fx-text-fill: #ffffff;
+}
+
+/* ==================== Text Area ==================== */
+.text-area {
+    -fx-background-color: #3c3c3c;
+    -fx-text-fill: #cccccc;
+    -fx-border-color: #3e3e42;
+    -fx-border-radius: 4px;
+    -fx-background-radius: 4px;
+}
+
+.text-area .content {
+    -fx-background-color: #3c3c3c;
+}
+
+/* ==================== Dialog ==================== */
+.dialog-pane {
+    -fx-background-color: #2d2d2d;
+    -fx-border-color: #3e3e42;
+    -fx-border-radius: 8px;
+    -fx-background-radius: 8px;
+}
+
+.dialog-pane .header-panel {
+    -fx-background-color: #252526;
+    -fx-border-color: #3e3e42;
+    -fx-border-width: 0 0 1 0;
+}
+
+.dialog-pane .header-panel .label {
+    -fx-text-fill: #ffffff;
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+}
+
+.dialog-pane .content {
+    -fx-background-color: #2d2d2d;
+}
+
+.dialog-pane .label {
+    -fx-text-fill: #cccccc;
+}
+
+.dialog-pane .button {
+    -fx-background-color: #0e639c;
+    -fx-text-fill: #ffffff;
+    -fx-background-radius: 4px;
+}
+
+.dialog-pane .button:hover {
+    -fx-background-color: #1177bb;
+}
+
+/* ==================== Alert ==================== */
+.alert {
+    -fx-background-color: #2d2d2d;
+}
+
+.alert .header-panel {
+    -fx-background-color: #252526;
+}
+
+.alert .content {
+    -fx-background-color: #2d2d2d;
+}
+
+.alert .label {
+    -fx-text-fill: #cccccc;
+}
+
+.alert.information .header-panel {
+    -fx-background-color: #388a34;
+}
+
+.alert.error .header-panel {
+    -fx-background-color: #d13438;
+}
+
+.alert.warning .header-panel {
+    -fx-background-color: #ca5010;
+}
+
+/* ==================== TextField ==================== */
+.text-field {
+    -fx-background-color: #3c3c3c;
+    -fx-text-fill: #cccccc;
+    -fx-border-color: #3e3e42;
+    -fx-border-radius: 4px;
+    -fx-background-radius: 4px;
+    -fx-prompt-text-fill: #858585;
+}
+
+.text-field:focused {
+    -fx-border-color: #0078d7;
+}
+
+/* ==================== PasswordField ==================== */
+.password-field {
+    -fx-background-color: #3c3c3c;
+    -fx-text-fill: #cccccc;
+    -fx-border-color: #3e3e42;
+    -fx-border-radius: 4px;
+    -fx-background-radius: 4px;
+}
+
+.password-field:focused {
+    -fx-border-color: #0078d7;
+}

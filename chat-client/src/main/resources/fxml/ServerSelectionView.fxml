@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.chatv2.client.gui.controller.ServerSelectionController"
+      spacing="20" styleClass="root-container" stylesheets="@../css/client.css">
+
+    <padding>
+        <Insets top="30" right="30" bottom="30" left="30"/>
+    </padding>
+
+    <!-- Header -->
+    <Label text="Select Server" styleClass="header-title"/>
+
+    <!-- Discovery Mode -->
+    <VBox spacing="10">
+        <Label text="Discovery Mode:" styleClass="section-label"/>
+        <HBox spacing="20">
+            <RadioButton fx:id="autoDiscoveryRadio" text="Auto-Discovery" selected="true"/>
+            <RadioButton fx:id="manualInputRadio" text="Manual Input"/>
+        </HBox>
+    </VBox>
+
+    <!-- Server List Container -->
+    <VBox fx:id="serverListContainer" spacing="10" VBox.vgrow="ALWAYS">
+        <Label text="Discovered Servers:" styleClass="section-label"/>
+        <ListView fx:id="serverListView" VBox.vgrow="ALWAYS" styleClass="server-list-view"/>
+    </VBox>
+
+    <!-- Manual Input Container -->
+    <VBox fx:id="manualInputContainer" spacing="10" visible="false" managed="false">
+        <Label text="Server Address:" styleClass="section-label"/>
+        <HBox spacing="10" alignment="CENTER_LEFT">
+            <TextField fx:id="manualHostField" promptText="localhost" HBox.hgrow="ALWAYS"/>
+            <Label text=":"/>
+            <TextField fx:id="manualPortField" promptText="8080" prefWidth="100"/>
+        </HBox>
+    </VBox>
+
+    <!-- Buttons -->
+    <HBox spacing="10" alignment="CENTER_RIGHT">
+        <Region HBox.hgrow="ALWAYS"/>
+        <Button fx:id="refreshButton" text="Refresh" styleClass="secondary-button"/>
+        <Button fx:id="manualConnectButton" text="Connect" visible="false" managed="false" styleClass="primary-button"/>
+        <Button fx:id="connectButton" text="Connect" styleClass="primary-button"/>
+    </HBox>
+
+</VBox>

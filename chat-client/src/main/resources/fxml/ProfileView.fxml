@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.image.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.chatv2.client.gui.controller.ProfileController"
+      spacing="20" alignment="TOP_CENTER" styleClass="root-container" stylesheets="@../css/client.css">
+
+    <padding>
+        <Insets top="30" right="30" bottom="30" left="30"/>
+    </padding>
+
+    <!-- Header -->
+    <Label text="My Profile" styleClass="header-title"/>
+
+    <!-- Avatar Section -->
+    <VBox spacing="10" alignment="CENTER">
+        <ImageView fx:id="avatarImageView" styleClass="avatar-image-view-circular"/>
+        <Button fx:id="changeAvatarButton" text="Change Avatar" styleClass="secondary-button"/>
+    </VBox>
+
+    <!-- Username (Read-only) -->
+    <VBox spacing="5">
+        <Label text="Username:" styleClass="field-label"/>
+        <Label fx:id="usernameLabel" styleClass="username-label"/>
+    </VBox>
+
+    <!-- Full Name Field -->
+    <VBox spacing="5">
+        <Label text="Full Name:" styleClass="field-label"/>
+        <TextField fx:id="fullNameField" promptText="Enter your full name" styleClass="text-field"/>
+    </VBox>
+
+    <!-- Status Combo Box -->
+    <VBox spacing="5">
+        <Label text="Status:" styleClass="field-label"/>
+        <ComboBox fx:id="statusComboBox" prefWidth="200" styleClass="combo-box"/>
+    </VBox>
+
+    <!-- Bio Field -->
+    <VBox spacing="5">
+        <Label text="Bio:" styleClass="field-label"/>
+        <TextArea fx:id="bioTextArea" promptText="Tell us about yourself..." prefRowCount="4"
+                  wrapText="true" styleClass="text-area"/>
+    </VBox>
+
+    <!-- Buttons -->
+    <HBox spacing="10" alignment="CENTER">
+        <Button fx:id="backButton" text="Back" styleClass="secondary-button"/>
+        <Button fx:id="saveButton" text="Save" styleClass="primary-button"/>
+    </HBox>
+
+</VBox>

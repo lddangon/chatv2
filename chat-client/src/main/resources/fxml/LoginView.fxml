@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.chatv2.client.gui.controller.LoginController"
+      spacing="15" alignment="CENTER" styleClass="root-container" stylesheets="@../css/client.css">
+
+    <padding>
+        <Insets top="40" right="40" bottom="40" left="40"/>
+    </padding>
+
+    <!-- Header -->
+    <Label text="Login to ChatV2" styleClass="header-title"/>
+
+    <!-- Error Label -->
+    <Label fx:id="errorLabel" visible="false" wrapText="true" styleClass="error-label"/>
+
+    <!-- Username Field -->
+    <VBox spacing="5">
+        <Label text="Username:" styleClass="field-label"/>
+        <TextField fx:id="usernameField" promptText="Enter your username" styleClass="text-field"/>
+    </VBox>
+
+    <!-- Password Field -->
+    <VBox spacing="5">
+        <Label text="Password:" styleClass="field-label"/>
+        <PasswordField fx:id="passwordField" promptText="Enter your password" styleClass="text-field"/>
+    </VBox>
+
+    <!-- Remember Me -->
+    <CheckBox fx:id="rememberMeCheckBox" text="Remember me" styleClass="checkbox"/>
+
+    <!-- Buttons -->
+    <HBox spacing="10" alignment="CENTER">
+        <Button fx:id="backButton" text="Back" styleClass="secondary-button"/>
+        <Button fx:id="loginButton" text="Login" styleClass="primary-button"/>
+    </HBox>
+
+    <!-- Register Link -->
+    <Hyperlink text="Don't have an account? Register" onAction="#handleRegister" styleClass="hyperlink"/>
+
+</VBox>

@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.CheckBox?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+
+<BorderPane xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.chatv2.server.gui.controller.LogViewerController"
+            styleClass="log-viewer-pane">
+
+    <!-- Top: Filter Bar -->
+    <top>
+        <HBox styleClass="filter-bar" spacing="10" alignment="CENTER_LEFT">
+            <padding>
+                <Insets top="10" right="20" bottom="10" left="20"/>
+            </padding>
+
+            <Label text="Level:" styleClass="filter-label"/>
+
+            <ComboBox fx:id="levelFilterComboBox" prefWidth="150" styleClass="level-combobox"/>
+
+            <TextField fx:id="searchField" promptText="Search logs..."
+                     HBox.hgrow="ALWAYS" styleClass="search-field"/>
+
+            <CheckBox fx:id="autoScrollCheckBox" text="Auto Scroll" styleClass="auto-scroll-checkbox"/>
+
+            <Region HBox.hgrow="ALWAYS"/>
+
+            <Button fx:id="clearButton" text="Clear" onAction="#handleClear"
+                    styleClass="icon-button, clear-button"/>
+
+            <Button fx:id="refreshButton" text="Refresh" onAction="#handleRefresh"
+                    styleClass="icon-button, refresh-button"/>
+
+            <Button fx:id="exportButton" text="Export" onAction="#handleExport"
+                    styleClass="icon-button, export-button"/>
+        </HBox>
+    </top>
+
+    <!-- Center: Log Text Area -->
+    <center>
+        <TextArea fx:id="logTextArea" styleClass="log-text-area" wrapText="false"/>
+    </center>
+
+</BorderPane>

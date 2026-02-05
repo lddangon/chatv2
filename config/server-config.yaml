@@ -1,0 +1,32 @@
+# ChatV2 Server Configuration
+# This file contains server startup and runtime settings
+
+server:
+  # Server network configuration
+  host: "0.0.0.0"
+  port: 8080
+  name: "ChatV2 Server"
+
+# UDP multicast for server discovery
+udp:
+  enabled: false
+  multicastAddress: "239.255.255.250"
+  port: 9999
+  broadcastInterval: 5  # seconds between broadcasts
+
+# Database configuration
+database:
+  path: "data/chatv2.db"
+  connectionPoolSize: 10
+
+# Encryption settings
+encryption:
+  required: true
+  defaultPlugin: "AES-256-GCM"
+  rsaKeySize: 4096
+  aesKeySize: 256
+
+# Session and token settings
+session:
+  tokenExpirationSeconds: 3600  # 1 hour
+  refreshTokenExpirationDays: 30

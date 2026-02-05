@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.SplitPane?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<BorderPane xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.chatv2.server.gui.controller.ChatController"
+            styleClass="chat-management-pane">
+
+    <!-- Top: Refresh Bar -->
+    <top>
+        <HBox styleClass="refresh-bar" spacing="10" alignment="CENTER_RIGHT">
+            <padding>
+                <Insets top="10" right="20" bottom="10" left="20"/>
+            </padding>
+
+            <Region HBox.hgrow="ALWAYS"/>
+
+            <Button fx:id="refreshButton" text="Refresh" onAction="#handleRefresh"
+                    styleClass="icon-button, refresh-button"/>
+        </HBox>
+    </top>
+
+    <!-- Center: Split Pane -->
+    <center>
+        <SplitPane styleClass="chat-split-pane" dividerPositions="0.6">
+            <!-- Left: Chat Table -->
+            <TableView fx:id="chatTable" styleClass="chat-table">
+                <columns>
+                    <TableColumn fx:id="chatIdColumn" text="Chat ID" prefWidth="120"/>
+                    <TableColumn fx:id="chatNameColumn" text="Name" prefWidth="200"/>
+                    <TableColumn fx:id="chatTypeColumn" text="Type" prefWidth="100"/>
+                    <TableColumn fx:id="ownerColumn" text="Owner" prefWidth="120"/>
+                    <TableColumn fx:id="participantsCountColumn" text="Participants" prefWidth="100"/>
+                    <TableColumn fx:id="createdAtColumn" text="Created At" prefWidth="180"/>
+                </columns>
+            </TableView>
+
+            <!-- Right: Participants List -->
+            <VBox styleClass="participants-pane">
+                <padding>
+                    <Insets top="10" right="10" bottom="10" left="10"/>
+                </padding>
+
+                <HBox styleClass="participants-header" spacing="10" alignment="CENTER_LEFT">
+                    <Label text="Participants" styleClass="section-title"/>
+                </HBox>
+
+                <ListView fx:id="participantsListView" VBox.vgrow="ALWAYS"
+                          styleClass="participants-list"/>
+
+                <HBox styleClass="participants-actions" spacing="10" alignment="CENTER"
+                      style="-fx-padding: 10 0 0 0;">
+                    <Button fx:id="viewParticipantsButton" text="View Participants"
+                            onAction="#handleViewParticipants"
+                            styleClass="action-button, view-button" maxWidth="Infinity"/>
+                    <Button fx:id="viewHistoryButton" text="View History"
+                            onAction="#handleViewHistory"
+                            styleClass="action-button, view-button" maxWidth="Infinity"/>
+                </HBox>
+            </VBox>
+        </SplitPane>
+    </center>
+
+</BorderPane>

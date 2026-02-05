@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.chatv2</groupId>
+        <artifactId>chat-encryption-plugins</artifactId>
+        <version>1.0.0</version>
+    </parent>
+
+    <artifactId>chat-encryption-aes</artifactId>
+    <packaging>jar</packaging>
+
+    <name>ChatV2 AES Encryption Plugin</name>
+    <description>AES-256 encryption implementation</description>
+
+    <dependencies>
+        <!-- Encryption API -->
+        <dependency>
+            <groupId>com.chatv2</groupId>
+            <artifactId>chat-encryption-api</artifactId>
+            <version>1.0.0</version>
+        </dependency>
+
+        <!-- Bouncy Castle -->
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcprov-jdk18on</artifactId>
+        </dependency>
+
+        <!-- Logging -->
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-api</artifactId>
+        </dependency>
+
+        <!-- Testing -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-api</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-engine</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.3.0</version>
+                <configuration>
+                    <archive>
+                        <manifestEntries>
+                            <Encryption-Plugin-Name>AES-256</Encryption-Plugin-Name>
+                            <Encryption-Plugin-Version>1.0.0</Encryption-Plugin-Version>
+                            <Encryption-Plugin-Class>com.chatv2.encryption.aes.AesEncryptionPlugin</Encryption-Plugin-Class>
+                        </manifestEntries>
+                    </archive>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>

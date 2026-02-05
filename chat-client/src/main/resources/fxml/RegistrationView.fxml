@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.image.*?>
+<?import javafx.scene.layout.*?>
+
+<ScrollPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.chatv2.client.gui.controller.RegistrationController"
+            fitToWidth="true" styleClass="root-container" stylesheets="@../css/client.css">
+
+    <content>
+        <VBox spacing="15" maxWidth="500" styleClass="registration-container">
+            <padding>
+                <Insets top="30" right="30" bottom="30" left="30"/>
+            </padding>
+
+            <!-- Header -->
+            <Label text="Create New Account" styleClass="header-title"/>
+
+            <!-- Error Label -->
+            <Label fx:id="errorLabel" visible="false" wrapText="true" styleClass="error-label"/>
+
+            <!-- Avatar Section -->
+            <VBox spacing="10" alignment="CENTER">
+                <Label text="Avatar:" styleClass="field-label"/>
+                <ImageView fx:id="avatarImageView" styleClass="avatar-image-view"/>
+                <Button fx:id="chooseAvatarButton" text="Choose Avatar" styleClass="secondary-button"/>
+            </VBox>
+
+            <!-- Username Field -->
+            <VBox spacing="5">
+                <Label text="Username:" styleClass="field-label"/>
+                <TextField fx:id="usernameField" promptText="3-20 characters, letters/numbers only" styleClass="text-field"/>
+            </VBox>
+
+            <!-- Password Field -->
+            <VBox spacing="5">
+                <Label text="Password:" styleClass="field-label"/>
+                <PasswordField fx:id="passwordField" promptText="Min 8 characters, letters and numbers" styleClass="text-field"/>
+            </VBox>
+
+            <!-- Confirm Password Field -->
+            <VBox spacing="5">
+                <Label text="Confirm Password:" styleClass="field-label"/>
+                <PasswordField fx:id="confirmPasswordField" promptText="Re-enter password" styleClass="text-field"/>
+            </VBox>
+
+            <!-- Full Name Field -->
+            <VBox spacing="5">
+                <Label text="Full Name:" styleClass="field-label"/>
+                <TextField fx:id="fullNameField" promptText="Enter your full name" styleClass="text-field"/>
+            </VBox>
+
+            <!-- Bio Field -->
+            <VBox spacing="5">
+                <Label text="Bio (Optional):" styleClass="field-label"/>
+                <TextArea fx:id="bioTextArea" promptText="Tell us about yourself..." prefRowCount="3" styleClass="text-area"/>
+            </VBox>
+
+            <!-- Buttons -->
+            <HBox spacing="10" alignment="CENTER">
+                <Button fx:id="backButton" text="Back" styleClass="secondary-button"/>
+                <Button fx:id="registerButton" text="Register" styleClass="primary-button"/>
+            </HBox>
+
+        </VBox>
+    </content>
+
+</ScrollPane>

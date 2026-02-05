@@ -1,0 +1,15 @@
+# Maven
+target/
+*.class
+.DS_Store
+/.idea/
+/.vscode/
+*.log
+.mvn/
+build_and_test.bat
+nul
+.idea/
+
+# Environment and config files
+.env
+*.env

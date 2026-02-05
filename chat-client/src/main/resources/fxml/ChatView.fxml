@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.shape.Circle?>
+
+<BorderPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.chatv2.client.gui.controller.ChatController"
+            styleClass="root-container" stylesheets="@../css/client.css">
+
+    <!-- Top Bar -->
+    <top>
+        <HBox spacing="10" alignment="CENTER_LEFT" styleClass="top-bar">
+            <padding>
+                <Insets top="10" right="10" bottom="10" left="10"/>
+            </padding>
+            <Label fx:id="currentChatLabel" text="Select a chat" styleClass="chat-title"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Button fx:id="profileButton" text="Profile" styleClass="icon-button"/>
+            <Button fx:id="logoutButton" text="Logout" styleClass="icon-button"/>
+        </HBox>
+    </top>
+
+    <!-- Left: Chat List -->
+    <left>
+        <VBox spacing="10" styleClass="chat-list-panel">
+            <padding>
+                <Insets top="10" right="10" bottom="10" left="10"/>
+            </padding>
+            <Label text="Chats" styleClass="panel-title"/>
+            <ListView fx:id="chatListView" VBox.vgrow="ALWAYS" styleClass="chat-list-view"/>
+        </VBox>
+    </left>
+
+    <!-- Center: Messages -->
+    <center>
+        <VBox spacing="10" styleClass="message-panel">
+            <padding>
+                <Insets top="10" right="10" bottom="10" left="10"/>
+            </padding>
+            <ScrollPane fx:id="messageScrollPane" VBox.vgrow="ALWAYS" fitToWidth="true" styleClass="message-scroll-pane">
+                <content>
+                    <VBox fx:id="messageVBox" spacing="10" styleClass="message-container"/>
+                </content>
+            </ScrollPane>
+
+            <!-- Input Area -->
+            <HBox spacing="10" alignment="CENTER_LEFT" styleClass="input-area">
+                <Button fx:id="attachButton" text="📎" styleClass="icon-button"/>
+                <TextArea fx:id="messageTextArea" promptText="Type a message..." HBox.hgrow="ALWAYS"
+                          prefRowCount="3" wrapText="true" styleClass="message-input"/>
+                <Button fx:id="sendButton" text="Send" styleClass="primary-button"/>
+            </HBox>
+        </VBox>
+    </center>
+
+    <!-- Right: Participants -->
+    <right>
+        <VBox spacing="10" styleClass="participants-panel">
+            <padding>
+                <Insets top="10" right="10" bottom="10" left="10"/>
+            </padding>
+            <Label text="Participants" styleClass="panel-title"/>
+            <ListView fx:id="participantsListView" VBox.vgrow="ALWAYS" styleClass="participants-list-view"/>
+        </VBox>
+    </right>
+
+</BorderPane>
