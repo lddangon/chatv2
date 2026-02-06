@@ -24,14 +24,44 @@ public class DatabaseManager implements AutoCloseable {
     public DatabaseManager(String databasePath) {
         this.databasePath = databasePath;
         try {
-            String url = "jdbc:h2:" + databasePath + ";MODE=PostgreSQL;AUTO_SERVER=TRUE";
+            // Normalize database path for H2 with AUTO_SERVER=TRUE
+            // The path must be absolute, or start with "./" or "~/"
+            String normalizedPath = normalizeDatabasePath(databasePath);
+            String url = "jdbc:h2:" + normalizedPath + ";MODE=PostgreSQL;AUTO_SERVER=TRUE";
             this.connection = DriverManager.getConnection(url, "sa", "");
             initializeSchema();
-            log.info("Database initialized: {}", databasePath);
+            log.info("Database initialized: {}", normalizedPath);
         } catch (SQLException e) {
             log.error("Failed to initialize database", e);
             throw new RuntimeException("Failed to initialize database", e);
         }
+    }
+
+    /**
+     * Normalizes the database path for H2 database with AUTO_SERVER=TRUE.
+     * The path must be absolute, or start with "./" or "~/" to be valid with AUTO_SERVER=TRUE.
+     *
+     * @param path the original database path
+     * @return normalized path with proper prefix
+     */
+    private String normalizeDatabasePath(String path) {
+        if (path == null || path.isEmpty()) {
+            throw new IllegalArgumentException("Database path cannot be null or empty");
+        }
+
+        // If path starts with "." or "~", it's already valid
+        if (path.startsWith(".") || path.startsWith("~")) {
+            return path;
+        }
+
+        // If path is absolute (starts with "/" or contains ":" like "C:")
+        // it's already valid
+        if (path.startsWith("/") || path.contains(":") || path.startsWith("\\")) {
+            return path;
+        }
+
+        // Otherwise, prefix with "./" to make it explicitly relative
+        return "./" + path;
     }
 
     /**

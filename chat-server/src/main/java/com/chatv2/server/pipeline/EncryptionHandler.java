@@ -4,6 +4,7 @@ import com.chatv2.common.crypto.EncryptionResult;
 import com.chatv2.common.exception.ChatException;
 import com.chatv2.common.protocol.ChatMessage;
 import com.chatv2.server.manager.EncryptionPluginManager;
+import com.chatv2.server.manager.SessionManager;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -11,6 +12,7 @@ import io.netty.channel.ChannelPromise;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.crypto.spec.SecretKeySpec;
 import java.security.Key;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -23,10 +25,10 @@ import java.util.concurrent.ConcurrentHashMap;
 @io.netty.channel.ChannelHandler.Sharable
 public class EncryptionHandler extends ChannelDuplexHandler {
     private static final Logger log = LoggerFactory.getLogger(EncryptionHandler.class);
-    
+
     private final EncryptionPluginManager pluginManager;
     private final Map<Channel, byte[]> sessionKeys = new ConcurrentHashMap<>();
-    
+
     // AES-GCM sizes
     private static final int IV_SIZE = 12; // bytes
     private static final int TAG_SIZE = 16; // bytes
@@ -35,8 +37,9 @@ public class EncryptionHandler extends ChannelDuplexHandler {
      * Creates a new EncryptionHandler.
      *
      * @param pluginManager the encryption plugin manager
+     * @param sessionManager the session manager (unused - kept for compatibility)
      */
-    public EncryptionHandler(EncryptionPluginManager pluginManager) {
+    public EncryptionHandler(EncryptionPluginManager pluginManager, SessionManager sessionManager) {
         this.pluginManager = pluginManager;
     }
 

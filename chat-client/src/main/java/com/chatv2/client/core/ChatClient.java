@@ -2,10 +2,12 @@ package com.chatv2.client.core;
 
 import com.chatv2.client.network.NetworkClient;
 import com.chatv2.common.model.Message;
+import com.chatv2.common.protocol.ChatMessage;
 import com.chatv2.common.util.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -126,8 +128,9 @@ public class ChatClient {
 
         return networkClient.sendRequest(loginRequest)
             .thenAccept(response -> {
-                if (response.contains("SUCCESS")) {
-                    String[] parts = response.split(":");
+                String responseStr = new String(response.getPayload(), StandardCharsets.UTF_8);
+                if (responseStr.contains("SUCCESS")) {
+                    String[] parts = responseStr.split(":");
                     if (parts.length >= 4) {
                         currentUserId = UUID.fromString(parts[2]);
                         currentToken = parts[3];
@@ -136,7 +139,7 @@ public class ChatClient {
                     }
                 } else {
                     setState(ConnectionState.CONNECTED);
-                    log.warn("Authentication failed: {}", response);
+                    log.warn("Authentication failed: {}", responseStr);
                     throw new RuntimeException("Authentication failed");
                 }
             })
@@ -161,10 +164,11 @@ public class ChatClient {
 
         return networkClient.sendRequest(registerRequest)
             .thenAccept(response -> {
-                if (response.contains("SUCCESS")) {
+                String responseStr = new String(response.getPayload(), StandardCharsets.UTF_8);
+                if (responseStr.contains("SUCCESS")) {
                     log.info("Registration successful for user: {}", username);
                 } else {
-                    log.warn("Registration failed: {}", response);
+                    log.warn("Registration failed: {}", responseStr);
                     throw new RuntimeException("Registration failed");
                 }
             })
@@ -185,7 +189,8 @@ public class ChatClient {
         log.debug("Getting user profile for: {}", currentUserId);
 
         String profileRequest = String.format("USER_GET_PROFILE:%s", currentUserId);
-        String response = networkClient.sendRequest(profileRequest).get();
+        ChatMessage responseMsg = networkClient.sendRequest(profileRequest).get();
+        String response = new String(responseMsg.getPayload(), StandardCharsets.UTF_8);
 
         if (response.contains("SUCCESS")) {
             // Parse profile from response
@@ -230,10 +235,11 @@ public class ChatClient {
 
         return networkClient.sendRequest(updateRequest)
             .thenAccept(response -> {
-                if (response.contains("SUCCESS")) {
+                String responseStr = new String(response.getPayload(), StandardCharsets.UTF_8);
+                if (responseStr.contains("SUCCESS")) {
                     log.info("Profile updated successfully");
                 } else {
-                    log.warn("Profile update failed: {}", response);
+                    log.warn("Profile update failed: {}", responseStr);
                     throw new RuntimeException("Profile update failed");
                 }
             })
@@ -248,10 +254,11 @@ public class ChatClient {
      */
     public void setMessageConsumer(Consumer<Message> consumer) {
         networkClient.setMessageHandler(message -> {
-            if (message.contains("MESSAGE_RECEIVE")) {
+            String messageStr = new String(message.getPayload(), StandardCharsets.UTF_8);
+            if (messageStr.contains("MESSAGE_RECEIVE")) {
                 // Parse and deliver message
                 try {
-                    String[] parts = message.split(":");
+                    String[] parts = messageStr.split(":");
                     if (parts.length >= 5) {
                         UUID chatId = UUID.fromString(parts[1]);
                         UUID senderId = UUID.fromString(parts[2]);

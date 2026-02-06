@@ -21,6 +21,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Optional;
 
 /**
@@ -184,8 +185,13 @@ public class ServerAdminApp extends Application {
 
         // Set application icon
         try {
-            Image icon = new Image(getClass().getResourceAsStream("/images/icon.png"));
-            this.primaryStage.getIcons().add(icon);
+            InputStream iconStream = getClass().getResourceAsStream("/images/icon.png");
+            if (iconStream != null) {
+                Image icon = new Image(iconStream);
+                this.primaryStage.getIcons().add(icon);
+            } else {
+                log.debug("Application icon not found, skipping");
+            }
         } catch (Exception e) {
             log.warn("Could not load application icon", e);
         }

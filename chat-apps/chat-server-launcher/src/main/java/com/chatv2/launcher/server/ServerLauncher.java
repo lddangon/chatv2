@@ -152,7 +152,7 @@ public class ServerLauncher {
         String host = "0.0.0.0";
         int port = 8080;
         String name = "ChatV2 Server";
-        String databasePath = "data/chat.db";
+        String databasePath = "./data/chat.db";
         boolean encryptionRequired = true;
 
         for (int i = 0; i < args.length; i++) {

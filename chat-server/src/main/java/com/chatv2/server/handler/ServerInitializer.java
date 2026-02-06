@@ -1,7 +1,10 @@
 package com.chatv2.server.handler;
 
+import com.chatv2.common.protocol.BinaryMessageCodec;
+import com.chatv2.common.protocol.ChatMessage;
 import com.chatv2.server.config.ServerProperties;
 import com.chatv2.server.manager.*;
+import com.chatv2.server.pipeline.EncryptionHandler;
 import com.chatv2.server.storage.DatabaseManager;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
@@ -21,6 +24,7 @@ public class ServerInitializer extends ChannelInitializer<SocketChannel> {
     private final ChatManager chatManager;
     private final SessionManager sessionManager;
     private final MessageManager messageManager;
+    private final EncryptionPluginManager encryptionPluginManager;
 
     public ServerInitializer(DatabaseManager databaseManager, ServerProperties serverProperties) {
         this.databaseManager = databaseManager;
@@ -31,6 +35,7 @@ public class ServerInitializer extends ChannelInitializer<SocketChannel> {
             : new ServerProperties.SessionConfig(3600, 30);
         this.sessionManager = new SessionManager(databaseManager.createSessionRepository(), sessionConfig);
         this.messageManager = new MessageManager(databaseManager.createMessageRepository());
+        this.encryptionPluginManager = new EncryptionPluginManager();
     }
 
     /**
@@ -44,15 +49,19 @@ public class ServerInitializer extends ChannelInitializer<SocketChannel> {
     protected void initChannel(SocketChannel ch) {
         ChannelPipeline pipeline = ch.pipeline();
 
-        // Frame decoder/encoder
-        pipeline.addLast("frameDecoder", new LengthFieldBasedFrameDecoder(10485760, 0, 4, 0, 0));
+        // Add length field decoder (handles packets larger than 10MB)
+        pipeline.addLast("frameDecoder", new LengthFieldBasedFrameDecoder(10485760, 16, 4, 0, 0));
+
+        // Add length field prepender (prepends length field before each packet)
         pipeline.addLast("frameEncoder", new LengthFieldPrepender(4));
 
-        // String decoder/encoder
-        pipeline.addLast("stringDecoder", new StringDecoder(CharsetUtil.UTF_8));
-        pipeline.addLast("stringEncoder", new StringEncoder(CharsetUtil.UTF_8));
+        // Add binary message codec (implements PROTOCOL_SPEC.md)
+        pipeline.addLast("messageCodec", new BinaryMessageCodec());
 
-        // Business logic handlers
+        // Add encryption handler (decrypts incoming, encrypts outgoing)
+        pipeline.addLast("encryptionHandler", new EncryptionHandler(encryptionPluginManager, sessionManager));
+
+        // Business logic handlers (all work with ChatMessage instead of String)
         pipeline.addLast("authHandler", new AuthHandler(userManager, sessionManager));
         pipeline.addLast("chatHandler", new ChatHandler(chatManager, messageManager, sessionManager));
         pipeline.addLast("messageHandler", new MessageHandler(messageManager, sessionManager));
@@ -86,6 +95,13 @@ public class ServerInitializer extends ChannelInitializer<SocketChannel> {
      */
     public MessageManager getMessageManager() {
         return messageManager;
+    }
+
+    /**
+     * Gets encryption plugin manager.
+     */
+    public EncryptionPluginManager getEncryptionPluginManager() {
+        return encryptionPluginManager;
     }
 
     /**

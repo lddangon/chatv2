@@ -1,5 +1,6 @@
 package com.chatv2.client.network;
 
+import com.chatv2.common.protocol.ChatMessage;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -13,6 +14,7 @@ import io.netty.util.CharsetUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
@@ -25,8 +27,8 @@ public class NetworkClient {
 
     private EventLoopGroup workerGroup;
     private Channel channel;
-    private Consumer<String> messageHandler;
-    private final ConcurrentHashMap<String, CompletableFuture<String>> pendingRequests = new ConcurrentHashMap<>();
+    private Consumer<ChatMessage> messageHandler;
+    private final ConcurrentHashMap<String, CompletableFuture<ChatMessage>> pendingRequests = new ConcurrentHashMap<>();
 
     public NetworkClient() {
     }
@@ -112,8 +114,8 @@ public class NetworkClient {
     /**
      * Sends a request to the server.
      */
-    public CompletableFuture<String> sendRequest(String request) {
-        CompletableFuture<String> responseFuture = new CompletableFuture<>();
+    public CompletableFuture<ChatMessage> sendRequest(String request) {
+        CompletableFuture<ChatMessage> responseFuture = new CompletableFuture<>();
 
         if (channel == null || !channel.isActive()) {
             responseFuture.completeExceptionally(new IllegalStateException("Not connected"));
@@ -134,7 +136,7 @@ public class NetworkClient {
     /**
      * Sets a handler for incoming messages.
      */
-    public void setMessageHandler(Consumer<String> handler) {
+    public void setMessageHandler(Consumer<ChatMessage> handler) {
         this.messageHandler = handler;
     }
 
