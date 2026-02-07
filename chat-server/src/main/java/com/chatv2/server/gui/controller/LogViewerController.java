@@ -27,6 +27,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Controller for the Log Viewer view.
@@ -52,6 +53,10 @@ public class LogViewerController {
     // Async log loading
     private ExecutorService logLoaderExecutor;
     private volatile boolean isLoadingLogs = false;
+    private final AtomicBoolean initialized = new AtomicBoolean(false);
+
+    // Lock for synchronization between initialize and cleanup
+    private final Object lock = new Object();
 
     @FXML private TextArea logTextArea;
     @FXML private ComboBox<Level> levelFilterComboBox;
@@ -77,6 +82,12 @@ public class LogViewerController {
     @FXML
     private void initialize() {
         log.debug("Initializing LogViewerController");
+
+        if (!initialized.compareAndSet(false, true)) {
+            log.warn("LogViewerController already initialized [hashCode={}], skipping re-initialization",
+                System.identityHashCode(this));
+            return;
+        }
 
         try {
             // Initialize level filter combo box
@@ -276,7 +287,13 @@ public class LogViewerController {
             raf.seek(startPosition);
 
             // Read new content
-            byte[] buffer = new byte[(int)(endPosition - startPosition)];
+            // CRITICAL: Prevent Integer Overflow and DoS attacks by validating buffer size
+            long size = endPosition - startPosition;
+            if (size <= 0 || size > 10_000_000) {  // Maximum 10MB at a time
+                log.error("Invalid log segment size: {} bytes (must be 0 < size <= 10,000,000)", size);
+                return;
+            }
+            byte[] buffer = new byte[(int)size];
             int bytesRead = raf.read(buffer);
 
             if (bytesRead > 0) {
@@ -612,52 +629,63 @@ public class LogViewerController {
     /**
      * Cleans up resources when controller is destroyed.
      * Stops the file watcher and clears the log buffer.
+     * Synchronized with initialize() to prevent race conditions.
      */
     public void cleanup() {
-        log.debug("Cleaning up LogViewerController");
-
-        // Stop file watching
-        isWatching = false;
-
-        // Shutdown file watcher
-        if (logFileWatcher != null) {
-            try {
-                log.debug("Shutting down log file watcher");
-                logFileWatcher.shutdown();
-
-                // Wait for pending tasks to complete (max 1 second)
-                if (!logFileWatcher.awaitTermination(1, TimeUnit.SECONDS)) {
-                    log.warn("File watcher did not terminate gracefully, forcing shutdown");
-                    logFileWatcher.shutdownNow();
-                }
-            } catch (InterruptedException e) {
-                log.warn("File watcher shutdown was interrupted", e);
-                Thread.currentThread().interrupt();
-            } catch (Exception e) {
-                log.error("Error shutting down file watcher", e);
+        synchronized (lock) {
+            if (!initialized.get()) {
+                log.debug("LogViewerController not initialized, skipping cleanup");
+                return;
             }
-        }
 
-        // Stop log loading
-        isLoadingLogs = false;
-        if (logLoaderExecutor != null) {
-            try {
-                log.debug("Shutting down log loader executor");
-                logLoaderExecutor.shutdown();
-                if (!logLoaderExecutor.awaitTermination(2, TimeUnit.SECONDS)) {
-                    log.warn("Log loader executor did not terminate gracefully, forcing shutdown");
+            log.debug("Cleaning up LogViewerController");
+
+            // Stop file watching
+            isWatching = false;
+
+            // Shutdown file watcher
+            if (logFileWatcher != null) {
+                try {
+                    log.debug("Shutting down log file watcher");
+                    logFileWatcher.shutdown();
+
+                    // Wait for pending tasks to complete (max 1 second)
+                    if (!logFileWatcher.awaitTermination(1, TimeUnit.SECONDS)) {
+                        log.warn("File watcher did not terminate gracefully, forcing shutdown");
+                        logFileWatcher.shutdownNow();
+                    }
+                } catch (InterruptedException e) {
+                    log.warn("File watcher shutdown was interrupted", e);
+                    Thread.currentThread().interrupt();
+                } catch (Exception e) {
+                    log.error("Error shutting down file watcher", e);
+                }
+            }
+
+            // Stop log loading
+            isLoadingLogs = false;
+            if (logLoaderExecutor != null) {
+                try {
+                    log.debug("Shutting down log loader executor");
+                    logLoaderExecutor.shutdown();
+                    if (!logLoaderExecutor.awaitTermination(2, TimeUnit.SECONDS)) {
+                        log.warn("Log loader executor did not terminate gracefully, forcing shutdown");
+                        logLoaderExecutor.shutdownNow();
+                    }
+                } catch (InterruptedException e) {
+                    log.warn("Log loader executor shutdown was interrupted", e);
                     logLoaderExecutor.shutdownNow();
+                    Thread.currentThread().interrupt();
                 }
-            } catch (InterruptedException e) {
-                log.warn("Log loader executor shutdown was interrupted", e);
-                logLoaderExecutor.shutdownNow();
-                Thread.currentThread().interrupt();
             }
+
+            // Reset initialization flag to allow re-initialization if needed
+            initialized.set(false);
+
+            // Clear log buffer to free memory
+            logBuffer.clear();
+
+            log.info("LogViewerController cleanup completed");
         }
-
-        // Clear log buffer to free memory
-        logBuffer.clear();
-
-        log.info("LogViewerController cleanup completed");
     }
 }
