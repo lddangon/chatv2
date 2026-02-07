@@ -15,15 +15,24 @@ import org.apache.logging.log4j.core.layout.PatternLayout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Controller for the Log Viewer view.
@@ -37,6 +46,19 @@ public class LogViewerController {
     private LogAppender customAppender;
     private final ConcurrentLinkedQueue<String> logBuffer = new ConcurrentLinkedQueue<>();
     private static final int MAX_LOG_ENTRIES = 1000;
+    
+    // Flag to track if the custom appender was successfully configured
+    private volatile boolean appenderConfigured = false;
+    // Executor service for async appender initialization
+    private final ExecutorService executorService = Executors.newSingleThreadExecutor(r -> {
+        Thread thread = new Thread(r, "LogViewer-Appender-Initializer");
+        thread.setDaemon(true);
+        return thread;
+    });
+    // Retry configuration for appender initialization
+    private static final int APPENDER_INIT_RETRY_COUNT = 3;
+    private static final long APPENDER_INIT_DELAY_MS = 500;
+    private static final long APPENDER_INIT_RETRY_DELAY_MS = 1000;
 
     @FXML private TextArea logTextArea;
     @FXML private ComboBox<Level> levelFilterComboBox;
@@ -57,65 +79,317 @@ public class LogViewerController {
 
     /**
      * Initializes the controller.
-     * Sets up custom Log4j2 appender and initializes UI components.
+     * Sets up UI components and schedules async appender initialization.
+     * 
+     * Note: Appender initialization is deferred to avoid potential issues with
+     * Log4j2 context initialization during JavaFX startup. This is done
+     * asynchronously after UI is fully initialized.
      */
     @FXML
     private void initialize() {
         log.debug("Initializing LogViewerController");
 
-        // Initialize level filter combo box
-        levelFilterComboBox.getItems().addAll(
-            Level.ALL, Level.DEBUG, Level.INFO, Level.WARN, Level.ERROR
-        );
-        levelFilterComboBox.setValue(Level.ALL);
+        try {
+            // Initialize level filter combo box
+            levelFilterComboBox.getItems().addAll(
+                Level.ALL, Level.DEBUG, Level.INFO, Level.WARN, Level.ERROR
+            );
+            levelFilterComboBox.setValue(Level.ALL);
 
-        // Initialize auto-scroll checkbox
-        autoScrollCheckBox.setSelected(true);
+            // Initialize auto-scroll checkbox
+            autoScrollCheckBox.setSelected(true);
 
-        // Set log text area to be non-editable and monospaced
-        logTextArea.setEditable(false);
-        logTextArea.setStyle("-fx-font-family: 'monospace'; -fx-font-size: 12px;");
+            // Set log text area to be non-editable and monospaced
+            logTextArea.setEditable(false);
+            logTextArea.setStyle("-fx-font-family: 'monospace'; -fx-font-size: 12px;");
 
-        // Setup custom Log4j2 appender
-        setupCustomAppender();
+            // Add listeners for UI components
+            setupListeners();
 
-        // Add listeners
-        setupListeners();
+            // Schedule async appender initialization after UI is ready
+            // This prevents blocking the JavaFX Application Thread and allows
+            // Log4j2 context to fully initialize independently
+            initializeAppenderAsync();
 
-        log.info("LogViewerController initialized");
+            log.info("LogViewerController initialized successfully");
+        } catch (Exception e) {
+            // Catch any initialization errors to ensure UI is always functional
+            log.error("Error during LogViewerController initialization", e);
+            // Even if UI initialization fails partially, try to initialize appender
+            initializeAppenderAsync();
+        }
     }
 
     /**
-     * Sets up custom Log4j2 appender to capture logs.
+     * Asynchronously initializes the custom Log4j2 appender with retry logic.
+     * 
+     * This method is called after UI initialization to ensure that:
+     * 1. Log4j2 context is fully initialized
+     * 2. JavaFX Application Thread is not blocked
+     * 3. UI components are ready before appender starts sending events
+     * 
+     * The initialization includes:
+     * - Initial delay to allow Log4j2 context to stabilize
+     * - Multiple retry attempts on failure
+     * - Detailed error logging for debugging
+     * - Fallback to reading logs from file if appender setup fails
      */
-    private void setupCustomAppender() {
-        try {
-            PatternLayout layout = PatternLayout.newBuilder()
-                .withPattern("%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n")
-                .build();
+    private void initializeAppenderAsync() {
+        executorService.submit(() -> {
+            log.debug("Starting async appender initialization with {} retries", APPENDER_INIT_RETRY_COUNT);
+            
+            // Wait for Log4j2 context to be fully initialized
+            try {
+                Thread.sleep(APPENDER_INIT_DELAY_MS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                log.warn("Appender initialization delay was interrupted", e);
+                return;
+            }
 
-            customAppender = new LogAppender("GuiLogAppender", layout, null, true);
+            // Retry mechanism for appender initialization
+            int attempt = 0;
+            boolean success = false;
+            Exception lastException = null;
+
+            while (attempt < APPENDER_INIT_RETRY_COUNT && !success) {
+                attempt++;
+                try {
+                    log.debug("Appender initialization attempt {}/{}", attempt, APPENDER_INIT_RETRY_COUNT);
+                    success = setupCustomAppender();
+                    
+                    if (success) {
+                        log.info("Custom Log4j2 appender initialized successfully on attempt {}", attempt);
+                        appenderConfigured = true;
+                        break;
+                    }
+                } catch (Exception e) {
+                    lastException = e;
+                    log.warn("Appender initialization attempt {}/{} failed: {}", 
+                        attempt, APPENDER_INIT_RETRY_COUNT, e.getMessage());
+                    
+                    // Wait before retrying (except on last attempt)
+                    if (attempt < APPENDER_INIT_RETRY_COUNT) {
+                        try {
+                            Thread.sleep(APPENDER_INIT_RETRY_DELAY_MS);
+                        } catch (InterruptedException ie) {
+                            Thread.currentThread().interrupt();
+                            log.warn("Retry delay was interrupted", ie);
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // Handle final result
+            if (!success) {
+                log.error("Failed to initialize custom Log4j2 appender after {} attempts", 
+                    APPENDER_INIT_RETRY_COUNT, lastException);
+                appenderConfigured = false;
+                
+                // Show warning to user on JavaFX Application Thread
+                Platform.runLater(() -> {
+                    try {
+                        mainApp.showWarningAlert(
+                            "Log Appender Not Configured",
+                            "Live Log Capture Unavailable",
+                            "The custom log appender could not be initialized. " +
+                            "Logs from file can still be viewed and exported."
+                        );
+                        
+                        // Try to load existing logs from file as fallback
+                        loadLogsFromFile();
+                    } catch (Exception e) {
+                        log.error("Error showing warning or loading logs from file", e);
+                    }
+                });
+            }
+        });
+    }
+
+    /**
+     * Sets up custom Log4j2 appender to capture logs in real-time.
+     * 
+     * This method:
+     * - Checks if Log4j2 LoggerContext is properly initialized
+     * - Creates and configures a custom appender
+     * - Registers the appender with the root logger
+     * - Returns true if successful, false otherwise
+     * 
+     * @return true if appender was successfully configured, false otherwise
+     */
+    private boolean setupCustomAppender() {
+        try {
+            // Check if Log4j2 context is properly initialized
+            org.apache.logging.log4j.core.LoggerContext context;
+            try {
+                context = (org.apache.logging.log4j.core.LoggerContext) LogManager.getContext(false);
+                
+                if (context == null) {
+                    log.error("Log4j2 LoggerContext is null - cannot initialize appender");
+                    return false;
+                }
+                
+                // Verify context is started and accessible
+                if (context.getState() != org.apache.logging.log4j.core.LifeCycle.State.STARTED) {
+                    log.warn("Log4j2 LoggerContext is not started - attempting to use it anyway");
+                }
+            } catch (Exception e) {
+                log.error("Error accessing Log4j2 LoggerContext", e);
+                return false;
+            }
+
+            // Create pattern layout for log formatting
+            PatternLayout layout;
+            try {
+                layout = PatternLayout.newBuilder()
+                    .withPattern("%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n")
+                    .build();
+            } catch (Exception e) {
+                log.error("Failed to create PatternLayout for appender", e);
+                return false;
+            }
+
+            // Create custom appender instance
+            try {
+                customAppender = new LogAppender("GuiLogAppender", layout, null, true);
+            } catch (Exception e) {
+                log.error("Failed to instantiate LogAppender", e);
+                return false;
+            }
 
             // Add appender to root logger
-            org.apache.logging.log4j.core.LoggerContext context =
-                (org.apache.logging.log4j.core.LoggerContext) LogManager.getContext(false);
-            org.apache.logging.log4j.core.Logger rootLogger = context.getRootLogger();
-            rootLogger.addAppender(customAppender);
+            try {
+                org.apache.logging.log4j.core.Logger rootLogger = context.getRootLogger();
+                
+                if (rootLogger == null) {
+                    log.error("Root logger is null - cannot add appender");
+                    return false;
+                }
+                
+                rootLogger.addAppender(customAppender);
+                log.debug("Custom Log4j2 appender registered to root logger");
+            } catch (Exception e) {
+                log.error("Failed to add appender to root logger", e);
+                if (customAppender != null) {
+                    customAppender.stop();
+                    customAppender = null;
+                }
+                return false;
+            }
 
-            log.debug("Custom Log4j2 appender registered");
+            return true;
         } catch (Exception e) {
-            log.error("Failed to setup custom log appender", e);
+            log.error("Unexpected error during appender setup", e);
+            return false;
+        }
+    }
+
+    /**
+     * Loads existing logs from log file(s) as a fallback when appender is not configured.
+     * 
+     * This method searches for common log file locations and reads the most recent
+     * log entries to populate the log viewer. It's called when the appender
+     * initialization fails but we still want to show logs to the user.
+     */
+    private void loadLogsFromFile() {
+        log.debug("Attempting to load logs from file as fallback");
+        
+        try {
+            // Common log file locations to search
+            String[] possibleLogPaths = {
+                "logs/chat-server.log",
+                "logs/application.log",
+                "logs/server.log",
+                System.getProperty("user.dir") + "/logs/chat-server.log",
+                System.getProperty("user.dir") + "/logs/application.log"
+            };
+
+            boolean loaded = false;
+            for (String logPath : possibleLogPaths) {
+                Path path = Paths.get(logPath);
+                if (Files.exists(path) && Files.isReadable(path)) {
+                    log.info("Found readable log file: {}", logPath);
+                    if (readLogFile(path)) {
+                        loaded = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!loaded) {
+                log.warn("No readable log files found in expected locations");
+                Platform.runLater(() -> {
+                    logTextArea.appendText("Note: Live log capture is not available.\n");
+                    logTextArea.appendText("No existing log files found in standard locations.\n");
+                    logTextArea.appendText("Expected locations: logs/chat-server.log, logs/application.log\n");
+                });
+            }
+        } catch (Exception e) {
+            log.error("Error loading logs from file", e);
+        }
+    }
+
+    /**
+     * Reads a log file and populates the log buffer with recent entries.
+     * 
+     * @param logFilePath the path to the log file to read
+     * @return true if file was read successfully, false otherwise
+     */
+    private boolean readLogFile(Path logFilePath) {
+        try (BufferedReader reader = new BufferedReader(new FileReader(logFilePath.toFile()))) {
+            StringBuilder content = new StringBuilder();
+            String line;
+            int lineCount = 0;
+            
+            // Read the file
+            while ((line = reader.readLine()) != null && lineCount < MAX_LOG_ENTRIES) {
+                content.append(line).append("\n");
+                lineCount++;
+            }
+
+            final String logs = content.toString();
+            final int finalLineCount = lineCount;
+            
+            // Update UI on JavaFX thread
+            Platform.runLater(() -> {
+                logTextArea.appendText("Loaded " + finalLineCount + " log entries from file:\n");
+                logTextArea.appendText(logs);
+                logTextArea.appendText("\n--- End of file contents ---\n");
+            });
+
+            // Also populate buffer for filtering
+            String[] lines = logs.split("\n");
+            for (String logLine : lines) {
+                logBuffer.offer(logLine);
+            }
+
+            log.info("Successfully loaded {} log entries from file", lineCount);
+            return true;
+        } catch (IOException e) {
+            log.error("Failed to read log file: {}", logFilePath, e);
+            return false;
         }
     }
 
     /**
      * Sets up listeners for UI components.
+     * 
+     * This method configures event listeners for interactive UI elements:
+     * - Search field: Triggers log filtering when text changes
+     * - Auto-scroll checkbox: Toggles automatic scrolling to new logs
+     * - Level filter combo box: Filters logs by severity level
+     * 
+     * All listeners are non-blocking and execute on the JavaFX Application Thread.
      */
     private void setupListeners() {
-        // Search field listener
+        // Search field listener - triggers log filtering when text changes
         searchField.textProperty().addListener((observable, oldValue, newValue) -> filterLogs());
 
-        // Auto-scroll checkbox listener
+        // Level filter combo box listener - triggers log filtering when selection changes
+        levelFilterComboBox.setOnAction(event -> filterLogs());
+
+        // Auto-scroll checkbox listener - toggles automatic scrolling to new logs
         autoScrollCheckBox.selectedProperty().addListener((observable, oldValue, newValue) -> {
             autoScroll = newValue;
             if (autoScroll) {
@@ -126,6 +400,7 @@ public class LogViewerController {
 
     /**
      * Handles Clear button click.
+     * Clears the log buffer and text area.
      */
     @FXML
     private void handleClear() {
@@ -136,6 +411,7 @@ public class LogViewerController {
 
     /**
      * Handles Refresh button click.
+     * Re-applies the current filters to the log buffer.
      */
     @FXML
     private void handleRefresh() {
@@ -145,6 +421,7 @@ public class LogViewerController {
 
     /**
      * Handles Export button click.
+     * Exports the currently displayed logs to a text file.
      */
     @FXML
     private void handleExport() {
@@ -175,6 +452,7 @@ public class LogViewerController {
 
     /**
      * Filters logs based on selected level and search text.
+     * Works independently of appender configuration - filters from log buffer.
      */
     private void filterLogs() {
         Level selectedLevel = levelFilterComboBox.getValue();
@@ -204,24 +482,81 @@ public class LogViewerController {
 
     /**
      * Cleans up resources when controller is destroyed.
+     * 
+     * This method ensures proper resource cleanup to prevent memory leaks:
+     * - Stops and removes the custom Log4j2 appender if configured
+     * - Shuts down the executor service gracefully
+     * - Clears the log buffer
+     * - Handles any cleanup errors gracefully with detailed logging
+     * 
+     * This method should be called when:
+     * - Switching away from the Log Viewer view
+     * - The application is shutting down
+     * - The controller is no longer needed
      */
     public void cleanup() {
         log.debug("Cleaning up LogViewerController");
+        
+        // Cleanup appender if it was configured
         if (customAppender != null) {
-            customAppender.stop();
             try {
-                org.apache.logging.log4j.core.LoggerContext context =
-                    (org.apache.logging.log4j.core.LoggerContext) LogManager.getContext(false);
-                org.apache.logging.log4j.core.Logger rootLogger = context.getRootLogger();
-                rootLogger.removeAppender(customAppender);
+                log.debug("Stopping custom log appender");
+                customAppender.stop();
+                
+                // Remove appender from root logger
+                try {
+                    org.apache.logging.log4j.core.LoggerContext context =
+                        (org.apache.logging.log4j.core.LoggerContext) LogManager.getContext(false);
+                    
+                    if (context != null) {
+                        org.apache.logging.log4j.core.Logger rootLogger = context.getRootLogger();
+                        
+                        if (rootLogger != null) {
+                            rootLogger.removeAppender(customAppender);
+                            log.debug("Custom log appender removed from root logger");
+                        }
+                    }
+                } catch (Exception e) {
+                    log.error("Error removing log appender from logger", e);
+                }
             } catch (Exception e) {
-                log.error("Error removing log appender", e);
+                log.error("Error during appender cleanup", e);
             }
         }
+
+        // Shutdown executor service
+        try {
+            log.debug("Shutting down executor service");
+            executorService.shutdown();
+            
+            // Wait for pending tasks to complete (max 2 seconds)
+            if (!executorService.awaitTermination(2, TimeUnit.SECONDS)) {
+                log.warn("Executor service did not terminate gracefully, forcing shutdown");
+                executorService.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            log.warn("Executor service shutdown was interrupted", e);
+            Thread.currentThread().interrupt();
+        } catch (Exception e) {
+            log.error("Error shutting down executor service", e);
+        }
+
+        // Clear log buffer to free memory
+        logBuffer.clear();
+
+        log.info("LogViewerController cleanup completed");
     }
 
     /**
      * Custom Log4j2 Appender that captures log events for GUI display.
+     * 
+     * This appender:
+     * - Receives log events from Log4j2
+     * - Formats them with timestamp, level, logger name, etc.
+     * - Filters based on selected log level using numeric comparison
+     * - Updates the JavaFX UI via Platform.runLater()
+     * - Maintains a bounded buffer to prevent memory issues
+     * - Stores plain text (no ANSI codes) in logBuffer for UI
      */
     private class LogAppender extends AbstractAppender {
         protected LogAppender(String name, PatternLayout layout, Property[] properties, boolean ignoreExceptions) {
@@ -231,63 +566,80 @@ public class LogViewerController {
 
         @Override
         public void append(LogEvent event) {
+            // Skip if appender is not started
             if (!isStarted()) {
                 return;
             }
 
-            Level selectedLevel = levelFilterComboBox.getValue();
-            if (selectedLevel != null && selectedLevel != Level.ALL &&
-                event.getLevel().isMoreSpecificThan(selectedLevel)) {
-                return;
-            }
-
-            String formattedLog = event.getMessage().getFormattedMessage();
-            String timestamp = LocalDateTime.ofInstant(Instant.ofEpochMilli(event.getTimeMillis()),
-                ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("HH:mm:ss.SSS"));
-            String level = event.getLevel().toString();
-            String loggerName = event.getLoggerName();
-            String thread = event.getThreadName();
-
-            // Color code based on level
-            String logLine = String.format("%s [%-15s] %-5s %-30s - %s",
-                timestamp, thread, level, loggerName, formattedLog);
-
-            // Add color ANSI codes (for potential future terminal export)
-            String colorCode = getColorForLevel(event.getLevel());
-            String coloredLog = colorCode + logLine + "\033[0m";
-
-            // Add to buffer (limited size)
-            logBuffer.offer(coloredLog);
-            while (logBuffer.size() > MAX_LOG_ENTRIES) {
-                logBuffer.poll();
-            }
-
-            // Update UI on JavaFX thread
-            Platform.runLater(() -> {
-                String searchText = searchField.getText().toLowerCase().trim();
-                boolean searchMatch = searchText.isEmpty() ||
-                    logLine.toLowerCase().contains(searchText);
-
-                if (searchMatch) {
-                    logTextArea.appendText(logLine + "\n");
-
-                    // Limit text area size
-                    if (logTextArea.getText().split("\n").length > MAX_LOG_ENTRIES) {
-                        String[] lines = logTextArea.getText().split("\n", -1);
-                        int linesToRemove = lines.length - MAX_LOG_ENTRIES;
-                        String newText = String.join("\n", java.util.Arrays.copyOfRange(lines, linesToRemove, lines.length));
-                        logTextArea.setText(newText);
-                    }
-
-                    if (autoScroll) {
-                        logTextArea.setScrollTop(Double.MAX_VALUE);
-                    }
+            try {
+                // Filter based on selected level using numeric comparison
+                // Only skip logs that are WEAKER than the selected level
+                Level selectedLevel = levelFilterComboBox.getValue();
+                if (selectedLevel != null && selectedLevel != Level.ALL &&
+                    event.getLevel().intLevel() < selectedLevel.intLevel()) {
+                    return;  // Skip logs weaker than selected level
                 }
-            });
+
+                // Format log entry
+                String formattedLog = event.getMessage().getFormattedMessage();
+                String timestamp = LocalDateTime.ofInstant(
+                    Instant.ofEpochMilli(event.getTimeMillis()),
+                    ZoneId.systemDefault()
+                ).format(DateTimeFormatter.ofPattern("HH:mm:ss.SSS"));
+                String level = event.getLevel().toString();
+                String loggerName = event.getLoggerName();
+                String thread = event.getThreadName();
+
+                // Build log line (plain text, no ANSI codes)
+                String logLine = String.format("%s [%-15s] %-5s %-30s - %s",
+                    timestamp, thread, level, loggerName, formattedLog);
+
+                // Store only plain text in buffer for UI (no ANSI codes)
+                // ANSI codes are only used when exporting to file with colors
+                logBuffer.offer(logLine);
+                while (logBuffer.size() > MAX_LOG_ENTRIES) {
+                    logBuffer.poll();
+                }
+
+                // Update UI on JavaFX Application Thread
+                Platform.runLater(() -> {
+                    try {
+                        String searchText = searchField.getText().toLowerCase().trim();
+                        boolean searchMatch = searchText.isEmpty() ||
+                            logLine.toLowerCase().contains(searchText);
+
+                        if (searchMatch) {
+                            logTextArea.appendText(logLine + "\n");
+
+                            // Limit text area size to prevent UI performance issues
+                            String[] lines = logTextArea.getText().split("\n", -1);
+                            if (lines.length > MAX_LOG_ENTRIES) {
+                                int linesToRemove = lines.length - MAX_LOG_ENTRIES;
+                                String newText = String.join("\n", 
+                                    Arrays.copyOfRange(lines, linesToRemove, lines.length));
+                                logTextArea.setText(newText);
+                            }
+
+                            // Auto-scroll if enabled
+                            if (autoScroll) {
+                                logTextArea.setScrollTop(Double.MAX_VALUE);
+                            }
+                        }
+                    } catch (Exception e) {
+                        // Catch UI update errors to prevent appender from failing
+                        log.error("Error updating log viewer UI", e);
+                    }
+                });
+            } catch (Exception e) {
+                // Catch any processing errors to prevent appender from stopping
+                log.error("Error processing log event", e);
+            }
         }
 
         /**
          * Gets ANSI color code for log level.
+         * These codes are used for terminal output when logs are exported with colors.
+         * Note: This is NOT used for UI display - only for potential export functionality.
          *
          * @param level the log level
          * @return ANSI color code

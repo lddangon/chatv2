@@ -40,6 +40,12 @@ public class ServerAdminApp extends Application {
     private BorderPane rootLayout;
 
     /**
+     * Reference to the current LogViewerController to ensure proper cleanup.
+     * This prevents resource leaks when switching between views.
+     */
+    private LogViewerController logViewerController;
+
+    /**
      * Main entry point for the GUI application.
      *
      * @param args command line arguments (--no-gui for headless mode)
@@ -219,6 +225,18 @@ public class ServerAdminApp extends Application {
     @Override
     public void stop() throws Exception {
         log.debug("Stopping ServerAdminApp");
+        
+        // Cleanup LogViewerController if it exists to prevent resource leaks
+        if (logViewerController != null) {
+            try {
+                log.debug("Cleaning up LogViewerController on application stop");
+                logViewerController.cleanup();
+                logViewerController = null;
+            } catch (Exception e) {
+                log.error("Error during LogViewerController cleanup on application stop", e);
+            }
+        }
+        
         // ChatServer shutdown is handled by ServerLauncher
     }
 
@@ -317,18 +335,44 @@ public class ServerAdminApp extends Application {
 
     /**
      * Shows the Log Viewer view.
+     * 
+     * This method ensures proper cleanup of any existing LogViewerController
+     * before loading a new instance to prevent resource leaks. The cleanup
+     * process includes:
+     * - Stopping and removing the custom Log4j2 appender
+     * - Shutting down the executor service
+     * - Clearing any held references
      */
     public void showLogViewerView() {
         try {
+            // Cleanup previous LogViewerController if it exists to prevent resource leaks
+            if (logViewerController != null) {
+                log.debug("Cleaning up previous LogViewerController before loading new view");
+                try {
+                    logViewerController.cleanup();
+                    log.debug("Previous LogViewerController cleanup completed successfully");
+                } catch (Exception e) {
+                    log.error("Error during LogViewerController cleanup", e);
+                    // Continue with loading the new view even if cleanup fails
+                } finally {
+                    logViewerController = null;
+                }
+            }
+
+            // Load new LogViewer view
             FXMLLoader loader = new FXMLLoader();
             loader.setLocation(getClass().getResource("/fxml/LogViewerView.fxml"));
             BorderPane logViewerView = loader.load();
 
             rootLayout.setCenter(logViewerView);
 
+            // Get and store the new controller for future cleanup
             LogViewerController controller = loader.getController();
             if (controller != null) {
                 controller.setMainApp(this);
+                // Store reference to enable cleanup on view change or application stop
+                logViewerController = controller;
+                log.debug("LogViewer view loaded and controller reference stored");
             }
 
         } catch (IOException e) {
@@ -379,6 +423,23 @@ public class ServerAdminApp extends Application {
     public void showInfoAlert(String title, String header, String content) {
         Platform.runLater(() -> {
             Alert alert = new Alert(Alert.AlertType.INFORMATION);
+            alert.setTitle(title);
+            alert.setHeaderText(header);
+            alert.setContentText(content);
+            alert.showAndWait();
+        });
+    }
+
+    /**
+     * Shows a warning alert dialog.
+     *
+     * @param title   the alert title
+     * @param header  the alert header text
+     * @param content the alert content text
+     */
+    public void showWarningAlert(String title, String header, String content) {
+        Platform.runLater(() -> {
+            Alert alert = new Alert(Alert.AlertType.WARNING);
             alert.setTitle(title);
             alert.setHeaderText(header);
             alert.setContentText(content);
