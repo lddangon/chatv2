@@ -45,6 +45,9 @@ public class LogViewerController {
     private Path logFilePath;
     private volatile boolean isWatching = false;
 
+    // Flag to prevent recursive logging when reading from file
+    private volatile boolean isReadingFromFile = false;
+
     @FXML private TextArea logTextArea;
     @FXML private ComboBox<Level> levelFilterComboBox;
     @FXML private TextField searchField;
@@ -215,10 +218,15 @@ public class LogViewerController {
 
             // Check if file grew (new entries added)
             if (currentSize > lastLogFileSize) {
-                long bytesToRead = currentSize - lastLogFileSize;
-                log.debug("Log file grew by {} bytes, reading new entries", bytesToRead);
+                // CRITICAL: Prevent recursive logging!
+                isReadingFromFile = true;
 
-                readNewLogEntries(logFilePath, lastLogFileSize, currentSize);
+                try {
+                    readNewLogEntries(logFilePath, lastLogFileSize, currentSize);
+                } finally {
+                    isReadingFromFile = false;
+                }
+
                 lastLogFileSize = currentSize;
             }
             // Handle file rotation (file was truncated and new one started)
@@ -261,6 +269,7 @@ public class LogViewerController {
 
                 final Level selectedLevel = levelFilterComboBox.getValue();
                 final String searchText = searchField.getText().toLowerCase().trim();
+                int newEntriesCount = 0;
 
                 for (String line : lines) {
                     if (line.isEmpty()) {
@@ -286,26 +295,37 @@ public class LogViewerController {
                     if (levelMatch && searchMatch) {
                         final String logLine = line;
                         Platform.runLater(() -> {
-                            logTextArea.appendText(logLine + "\n");
+                            try {
+                                // Add to buffer WITHOUT logging to prevent cycle
+                                logTextArea.appendText(logLine + "\n");
 
-                            // Limit text area size
-                            String[] allLines = logTextArea.getText().split("\n", -1);
-                            if (allLines.length > MAX_LOG_ENTRIES) {
-                                int linesToRemove = allLines.length - MAX_LOG_ENTRIES;
-                                String newText = String.join("\n",
-                                    Arrays.copyOfRange(allLines, linesToRemove, allLines.length));
-                                logTextArea.setText(newText);
-                            }
+                                // Limit text area size
+                                String[] allLines = logTextArea.getText().split("\n", -1);
+                                if (allLines.length > MAX_LOG_ENTRIES) {
+                                    int linesToRemove = allLines.length - MAX_LOG_ENTRIES;
+                                    String newText = String.join("\n",
+                                        Arrays.copyOfRange(allLines, linesToRemove, allLines.length));
+                                    logTextArea.setText(newText);
+                                }
 
-                            // Auto-scroll if enabled
-                            if (autoScroll) {
-                                logTextArea.setScrollTop(Double.MAX_VALUE);
+                                // Auto-scroll if enabled
+                                if (autoScroll) {
+                                    logTextArea.setScrollTop(Double.MAX_VALUE);
+                                }
+                            } catch (Exception e) {
+                                // Log this error (it's not related to reading file)
+                                log.error("Error updating log viewer UI", e);
                             }
                         });
                     }
+
+                    newEntriesCount++;
                 }
 
-                log.debug("Read {} new log entries from file", lines.length);
+                // Only log summary after reading is complete and flag is reset
+                if (newEntriesCount > 0) {
+                    log.debug("Read {} new log entries from file (recursive logging prevented)", newEntriesCount);
+                }
             }
 
         } catch (IOException e) {
