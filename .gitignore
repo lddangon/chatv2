@@ -53,3 +53,10 @@ desktop.ini
 .mvn/
 build_and_test.bat
 nul
+
+# Database files (temporary locks and data)
+*.db.lock.db
+*.db.mv.db
+
+# Test directories
+test-dir/
