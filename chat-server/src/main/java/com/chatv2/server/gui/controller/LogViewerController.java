@@ -26,6 +26,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.ExecutorService;
 
 /**
  * Controller for the Log Viewer view.
@@ -47,6 +48,10 @@ public class LogViewerController {
 
     // Flag to prevent recursive logging when reading from file
     private volatile boolean isReadingFromFile = false;
+    
+    // Async log loading
+    private ExecutorService logLoaderExecutor;
+    private volatile boolean isLoadingLogs = false;
 
     @FXML private TextArea logTextArea;
     @FXML private ComboBox<Level> levelFilterComboBox;
@@ -93,8 +98,15 @@ public class LogViewerController {
             // Find the log file
             findLogFile();
 
-            // Load initial logs from file
-            loadLogsFromFile();
+            // Initialize log loader executor
+            logLoaderExecutor = Executors.newSingleThreadExecutor(r -> {
+                Thread thread = new Thread(r, "LogViewer-LogLoader");
+                thread.setDaemon(true);
+                return thread;
+            });
+
+            // Load initial logs from file asynchronously
+            loadLogsFromFileAsync();
 
             // Start watching log file for new entries
             startLogFileWatcher();
@@ -135,19 +147,16 @@ public class LogViewerController {
         }
 
         // If main file not found, look for rolling files
-        try {
-            java.nio.file.DirectoryStream<Path> dirStream = Files.newDirectoryStream(Paths.get("logs"));
+        try (java.nio.file.DirectoryStream<Path> dirStream = Files.newDirectoryStream(Paths.get("logs"))) {
             for (Path file : dirStream) {
                 String fileName = file.getFileName().toString();
                 // Look for rolling files: chat-YYYY-MM-DD-N.log
                 if (fileName.startsWith("chat-20") && fileName.endsWith(".log")) {
                     logFilePath = file;
                     log.info("Found rolling log file to monitor: {}", file.toAbsolutePath());
-                    dirStream.close();
                     return;
                 }
             }
-            dirStream.close();
         } catch (IOException e) {
             log.debug("No logs directory found or error reading logs directory", e);
         }
@@ -245,8 +254,8 @@ public class LogViewerController {
                 Platform.runLater(() -> {
                     logTextArea.appendText("\n--- Log file rotation detected, reloading ---\n");
                 });
-                loadLogsFromFile();
                 lastLogFileSize = currentSize;
+                loadLogsFromFileAsync();
             }
 
         } catch (IOException e) {
@@ -410,9 +419,90 @@ public class LogViewerController {
         } catch (IOException e) {
             log.error("Failed to read log file: {}", logFilePath, e);
             Platform.runLater(() -> {
-                logTextArea.appendText("Error reading log file: " + e.getMessage() + "\n");
+                logTextArea.appendText("Error reading log file. Check system logs for details.\n");
             });
         }
+    }
+
+    /**
+     * Loads existing logs from the log file asynchronously.
+     * Reads the most recent log entries up to MAX_LOG_ENTRIES.
+     * This method does not block the JavaFX Application Thread.
+     */
+    private void loadLogsFromFileAsync() {
+        if (logFilePath == null) {
+            log.debug("Cannot load logs - no log file found");
+            return;
+        }
+
+        if (!canLoadLogs()) {
+            log.debug("Cannot load logs - either already loading or file not accessible");
+            return;
+        }
+
+        log.debug("Loading logs from file asynchronously: {}", logFilePath);
+
+        isLoadingLogs = true;
+        logLoaderExecutor.submit(() -> {
+            try {
+                // Чтение файла (логика из loadLogsFromFile, но без log.info в конце)
+                try (BufferedReader reader = new BufferedReader(new FileReader(logFilePath.toFile()))) {
+                    StringBuilder content = new StringBuilder();
+                    String line;
+                    int lineCount = 0;
+
+                    // Read last MAX_LOG_ENTRIES lines from file
+                    java.util.LinkedList<String> lines = new java.util.LinkedList<>();
+                    while ((line = reader.readLine()) != null) {
+                        lines.add(line);
+                        if (lines.size() > MAX_LOG_ENTRIES) {
+                            lines.removeFirst();
+                        }
+                        lineCount++;
+                    }
+
+                    // Build content from last lines
+                    for (String l : lines) {
+                        content.append(l).append("\n");
+                        logBuffer.offer(l);
+                    }
+
+                    final String logs = content.toString();
+                    final int finalLineCount = Math.min(lineCount, MAX_LOG_ENTRIES);
+
+                    // Update UI on JavaFX thread
+                    Platform.runLater(() -> {
+                        if (finalLineCount > 0) {
+                            logTextArea.appendText("Loaded " + finalLineCount + " recent log entries:\n");
+                            logTextArea.appendText(logs);
+                        } else {
+                            logTextArea.appendText("Log file is empty.\n");
+                        }
+                    });
+                }
+            } catch (IOException e) {
+                log.error("Failed to read log file: {}", logFilePath, e);
+                Platform.runLater(() -> {
+                    logTextArea.appendText("Error reading log file. Check system logs for details.\n");
+                });
+            } finally {
+                isLoadingLogs = false;
+            }
+        });
+    }
+
+    /**
+     * Checks if logs can be loaded from file.
+     * Ensures that no concurrent loading is happening and all resources are available.
+     *
+     * @return true if logs can be loaded, false otherwise
+     */
+    private boolean canLoadLogs() {
+        return !isLoadingLogs && 
+               logFilePath != null && 
+               Files.exists(logFilePath) &&
+               logLoaderExecutor != null && 
+               !logLoaderExecutor.isShutdown();
     }
 
     /**
@@ -545,6 +635,23 @@ public class LogViewerController {
                 Thread.currentThread().interrupt();
             } catch (Exception e) {
                 log.error("Error shutting down file watcher", e);
+            }
+        }
+
+        // Stop log loading
+        isLoadingLogs = false;
+        if (logLoaderExecutor != null) {
+            try {
+                log.debug("Shutting down log loader executor");
+                logLoaderExecutor.shutdown();
+                if (!logLoaderExecutor.awaitTermination(2, TimeUnit.SECONDS)) {
+                    log.warn("Log loader executor did not terminate gracefully, forcing shutdown");
+                    logLoaderExecutor.shutdownNow();
+                }
+            } catch (InterruptedException e) {
+                log.warn("Log loader executor shutdown was interrupted", e);
+                logLoaderExecutor.shutdownNow();
+                Thread.currentThread().interrupt();
             }
         }
 
