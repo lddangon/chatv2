@@ -53,6 +53,13 @@
   - Кодек `BinaryMessageCodec` интегрирован в клиентскую часть
   - Полная поддержка шифрования и сжатия в бинарном формате
 
+- **Модульная система шифрования через SPI**
+  - Реализован интерфейс `EncryptionPlugin` для расширяемой криптографии
+  - AES-256-GCM плагин для симметричного шифрования сообщений
+  - RSA-4096 плагин для обмена ключами
+  - Автоматическая загрузка всех плагинов через ServiceLoader при старте сервера
+  - Поддержка добавления собственных плагинов шифрования
+
 #### 📝 Улучшения
 - **Разделение логов по модулям**
   - Обновлена конфигурация `logback.xml`
@@ -98,11 +105,14 @@
 | Netty | 4.1.109.Final | Асинхронный сетевой фреймворк |
  | JavaFX | 21.0.1 | Современный GUI для десктопа |
  | H2 Database | 2.2.224 | Встроенная SQL база данных |
- | Bouncy Castle | 1.77 | Криптографические примитивы |
- | JUnit | 5.10.2 | Модульное и интеграционное тестирование |
- | Logback | 1.4.14 | Фреймворк логирования с модульной конфигурацией |
- | Maven | 3.9.6 | Сборка и управление зависимостями |
- | Jackson | 2.16.1 | Сериализация JSON |
+  | Bouncy Castle | 1.77 | Криптографические примитивы |
+  | JUnit | 5.10.2 | Модульное и интеграционное тестирование |
+  | Logback | 1.4.14 | Фреймворк логирования с модульной конфигурацией |
+  | Maven | 3.9.6 | Сборка и управление зависимостями |
+  | Jackson | 2.16.1 | Сериализация JSON |
+  | Encryption API | 1.0.0 | Интерфейс плагинов шифрования (SPI) |
+  | AES Plugin | 1.0.0 | Реализация AES-256-GCM через SPI |
+  | RSA Plugin | 1.0.0 | Реализация RSA-4096 через SPI |
 
 ## 📦 Требования
 
@@ -115,6 +125,33 @@
 
 - **JavaFX SDK** (обычно включён в JDK 21)
 - **IDE** (IntelliJ IDEA, Eclipse или NetBeans)
+
+### Плагины шифрования
+
+Плагины шифрования подключаются как Maven зависимости в модули сервера и клиента:
+
+```xml
+<!-- API плагинов шифрования -->
+<dependency>
+    <groupId>com.chatv2</groupId>
+    <artifactId>chat-encryption-api</artifactId>
+    <version>1.0.0</version>
+</dependency>
+
+<!-- Плагин AES-256-GCM -->
+<dependency>
+    <groupId>com.chatv2</groupId>
+    <artifactId>chat-encryption-aes</artifactId>
+    <version>1.0.0</version>
+</dependency>
+
+<!-- Плагин RSA-4096 -->
+<dependency>
+    <groupId>com.chatv2</groupId>
+    <artifactId>chat-encryption-rsa</artifactId>
+    <version>1.0.0</version>
+</dependency>
+```
 
 ## 🚀 Быстрый старт
 
@@ -202,6 +239,9 @@ mvn exec:java -Dexec.mainClass="com.chatv2.launcher.server.ServerLauncher"
 - Будет слушать UDP broadcast на порту `9999`
 - Инициализирует встроенную БД H2 в `data/chat.db`
 - Запустит админ-панель (JavaFX GUI)
+- Автоматически загрузит все плагины шифрования через SPI:
+  - AES-256-GCM плагин (активный по умолчанию)
+  - RSA-4096 плагин (для обмена ключами)
 
 ### Запуск клиента
 
@@ -396,10 +436,10 @@ ui:
 │       ├── gui/                               # JavaFX UI
 │       └── network/                           # Сетевой клиент
 │
-├── chat-encryption-plugins/                   # Плагины шифрования
-│   ├── chat-encryption-api/                   # API плагинов
-│   ├── chat-encryption-aes/                   # AES-256 плагин
-│   └── chat-encryption-rsa/                   # RSA плагин
+ ├── chat-encryption-plugins/                   # Плагины шифрования (SPI)
+ │   ├── chat-encryption-api/                   # API и интерфейс EncryptionPlugin
+ │   ├── chat-encryption-aes/                   # Реализация AES-256-GCM
+ │   └── chat-encryption-rsa/                   # Реализация RSA-4096
 │
 └── chat-apps/                                 # Лаунчеры приложений
     ├── chat-server-launcher/
@@ -411,9 +451,9 @@ ui:
 | Модуль | Описание | Статус |
 |--------|----------|--------|
 | chat-common | Общие модели, протокол, утилиты | ✅ Готово |
-| chat-encryption-api | Интерфейс плагинов шифрования | ✅ Готово |
-| chat-encryption-aes | Реализация AES-256 | ✅ Готово |
-| chat-encryption-rsa | Реализация RSA-4096 | ✅ Готово |
+| chat-encryption-api | Интерфейс плагинов шифрования (SPI) | ✅ Готово |
+| chat-encryption-aes | Реализация AES-256-GCM через SPI | ✅ Готово |
+| chat-encryption-rsa | Реализация RSA-4096 через SPI | ✅ Готово |
 | chat-server | Серверная логика и GUI | ✅ Готово |
 | chat-client | Клиентская логика и GUI | ⚠️ В разработке |
 | chat-server-launcher | Запуск сервера | ✅ Готово |
@@ -551,6 +591,183 @@ ByteBuf packet = (ByteBuf) out.get(0);
 - **Размер Tag:** 128 бит (аутентификация)
 - **Обмен ключами:** RSA-4096 с OAEP padding
 
+### Плагины шифрования
+
+ChatV2 использует модульную архитектуру плагинов шифрования, которая позволяет легко расширять систему новыми алгоритмами шифрования.
+
+#### Поддерживаемые плагины
+
+| Плагин | Алгоритм | Назначение | Статус |
+|--------|----------|------------|--------|
+| **AES-256-GCM** | AES-256-GCM | Симметричное шифрование сообщений | ✅ Активен по умолчанию |
+| **RSA-4096** | RSA/ECB/OAEP | Обмен ключами, цифровая подпись | ✅ Поддерживается |
+
+#### Система плагинов (SPI)
+
+Архитектура плагинов основана на Java SPI (Service Provider Interface):
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                  EncryptionPluginManager                     │
+│                   (Управление плагинами)                     │
+└──────────────┬──────────────────────────────────────────────┘
+               │
+               ├── ServiceLoader.load(EncryptionPlugin.class)
+               │
+               ▼
+        ┌──────────────┐
+        │  SPI (JDK)   │  Автоматическое обнаружение
+        └──────┬───────┘
+               │
+       ┌───────┴────────┐
+       │                │
+       ▼                ▼
+┌──────────────┐  ┌──────────────┐
+│ AES Plugin   │  │ RSA Plugin   │
+│ AES-256-GCM  │  │ RSA-4096     │
+└──────────────┘  └──────────────┘
+```
+
+**Как работает SPI:**
+
+1. **Интерфейс плагина:** `EncryptionPlugin` (в `chat-encryption-api`)
+   - Определяет контракт для всех плагинов шифрования
+   - Методы: `encrypt()`, `decrypt()`, `generateKey()`, `getName()`
+
+2. **Регистрация плагина:** Файл `META-INF/services/com.chatv2.encryption.api.EncryptionPlugin`
+   - Содержит полное имя класса реализации
+   - Пример для AES: `com.chatv2.encryption.aes.AesEncryptionPlugin`
+
+3. **Автозагрузка:** `EncryptionPluginManager` использует `ServiceLoader`
+   - Автоматически загружает все плагины при создании
+   - Логирует: `Loaded encryption plugin: {name} v{version}`
+
+4. **Выбор активного плагина:** Первый загруженный плагин становится активным
+   - Можно изменить через `setActivePlugin(name)`
+   - По умолчанию активен AES-256-GCM
+
+#### Автоматическая загрузка плагинов
+
+Оба плагина шифрования загружаются автоматически при старте сервера:
+
+```java
+// В ServerInitializer.java
+public EncryptionPluginManager getEncryptionPluginManager() {
+    return encryptionPluginManager;  // Автоматически инициализирован
+}
+
+// В логах при старте сервера:
+// Loaded encryption plugin: AES-256-GCM v1.0.0
+// Loaded encryption plugin: RSA-4096 v1.0.0
+// Active encryption plugin set to: AES-256-GCM
+```
+
+#### Добавление нового плагина шифрования
+
+Чтобы добавить новый плагин шифрования:
+
+1. **Создайте модуль плагина:**
+
+```xml
+<!-- pom.xml нового плагина -->
+<project>
+    <parent>
+        <groupId>com.chatv2</groupId>
+        <artifactId>chat-encryption-plugins</artifactId>
+        <version>1.0.0</version>
+    </parent>
+    <artifactId>chat-encryption-custom</artifactId>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.chatv2</groupId>
+            <artifactId>chat-encryption-api</artifactId>
+            <version>1.0.0</version>
+        </dependency>
+    </dependencies>
+</project>
+```
+
+2. **Реализуйте интерфейс EncryptionPlugin:**
+
+```java
+package com.chatv2.encryption.custom;
+
+import com.chatv2.encryption.api.EncryptionPlugin;
+import com.chatv2.encryption.api.EncryptionAlgorithm;
+import com.chatv2.common.crypto.EncryptionResult;
+import java.security.Key;
+import java.util.concurrent.CompletableFuture;
+
+public class CustomEncryptionPlugin implements EncryptionPlugin {
+
+    @Override
+    public String getName() {
+        return "CUSTOM-ALGORITHM";
+    }
+
+    @Override
+    public String getVersion() {
+        return "1.0.0";
+    }
+
+    @Override
+    public EncryptionAlgorithm getAlgorithm() {
+        return new EncryptionAlgorithm("CUSTOM-ALGORITHM", "CustomTransformation");
+    }
+
+    @Override
+    public CompletableFuture<EncryptionResult> encrypt(byte[] plaintext, Key key) {
+        // Реализация шифрования
+        return CompletableFuture.completedFuture(/* ... */);
+    }
+
+    @Override
+    public CompletableFuture<byte[]> decrypt(byte[] ciphertext, byte[] iv, byte[] tag, Key key) {
+        // Реализация дешифрования
+        return CompletableFuture.completedFuture(/* ... */);
+    }
+
+    @Override
+    public CompletableFuture<Key> generateKey() {
+        // Генерация ключа
+        return CompletableFuture.completedFuture(/* ... */);
+    }
+
+    @Override
+    public boolean isKeyValid(Key key) {
+        // Валидация ключа
+        return key != null && key.getAlgorithm().equals("CUSTOM");
+    }
+}
+```
+
+3. **Зарегистрируйте плагин через SPI:**
+
+Создайте файл `src/main/resources/META-INF/services/com.chatv2.encryption.api.EncryptionPlugin`:
+
+```
+com.chatv2.encryption.custom.CustomEncryptionPlugin
+```
+
+4. **Добавьте зависимость в pom.xml сервера/клиента:**
+
+```xml
+<dependency>
+    <groupId>com.chatv2</groupId>
+    <artifactId>chat-encryption-custom</artifactId>
+    <version>1.0.0</version>
+</dependency>
+```
+
+5. **Пересоберите проект:**
+
+```bash
+mvn clean install
+```
+
+Плагин будет автоматически загружен при следующем запуске сервера.
+
 ### Процесс обмена ключами
 
 1. Клиент подключается к серверу
@@ -667,6 +884,41 @@ mvn verify
 4. **Управление ключами**: RSA ключи хранятся в Java KeyStore
 5. **Валидация ввода**: Все пользовательские данные очищаются и проверяются
 6. **Ограничение скорости**: Защита от брутфорса при аутентификации
+7. **Модульная криптография**: Расширяемая архитектура через SPI плагины шифрования
+
+### Архитектура шифрования
+
+Система шифрования ChatV2 построена на модульной архитектуре с поддержкой плагинов:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Безопасность сообщений                     │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  ┌─────────────────┐      RSA-4096       ┌─────────────────┐ │
+│  │   Обмен ключами │ ◄──────────────────► │  Сервер         │ │
+│  │   (клиент)      │   OAEP Padding      │  (Key Store)    │ │
+│  └────────┬────────┘                     └─────────────────┘ │
+│           │                                                    │
+│           │ AES-256 сессионный ключ                            │
+│           ▼                                                    │
+│  ┌─────────────────────────────────────────────────────────┐ │
+│  │         AES-256-GCM (активный плагин)                    │ │
+│  │  • IV 128 бит (уникальный для каждого сообщения)         │ │
+│  │  • Tag 128 бит (аутентификация)                          │ │
+│  │  • Защита от replay-атак                                │ │
+│  └─────────────────────────────────────────────────────────┘ │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Слои защиты:**
+
+1. **Транспортный уровень:** Защита через TLS (опционально)
+2. **Протокол шифрования:** AES-256-GCM для всех сообщений после аутентификации
+3. **Обмен ключами:** RSA-4096 с OAEP padding для безопасной передачи сессионных ключей
+4. **Аутентификация:** JWT токены с коротким сроком действия
+5. **Интеграция с плагинами:** SPI позволяет легко добавлять новые алгоритмы шифрования
 
 ### Аудиты безопасности
 
@@ -782,7 +1034,7 @@ mvn verify
 ---
 
 **Версия:** 1.0.0
-**Последнее обновление:** 6 Февраля 2026
+**Последнее обновление:** 7 Февраля 2026
 **Статус:** В разработке
 
 ---
