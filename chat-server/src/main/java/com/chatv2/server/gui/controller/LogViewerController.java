@@ -598,13 +598,28 @@ public class LogViewerController {
         public void append(LogEvent event) {
             // Skip if appender is not started
             if (!isStarted()) {
+                log.debug("LogAppender: Appender not started, skipping event");
                 return;
             }
+
+            log.debug("LogAppender: Received log event - Level={}, Logger={}, Message={}",
+                event.getLevel(), event.getLoggerName(), event.getMessage().getFormattedMessage());
 
             try {
                 // Filter based on selected level using numeric comparison
                 // Only skip logs that are WEAKER than the selected level
                 Level selectedLevel = levelFilterComboBox.getValue();
+                log.debug("LogAppender: Filter check - SelectedLevel={}, EventLevel={}, EventLevel.int={}, SelectedLevel.int={}",
+                    selectedLevel, event.getLevel(), event.getLevel().intLevel(),
+                    selectedLevel != null ? selectedLevel.intLevel() : "null");
+
+                if (selectedLevel != null && selectedLevel != Level.ALL &&
+                    event.getLevel().intLevel() < selectedLevel.intLevel()) {
+                    log.debug("LogAppender: Skipping log event (level is too low)");
+                    return;  // Skip logs weaker than selected level
+                }
+
+                log.debug("LogAppender: Log event passed level filter");
                 if (selectedLevel != null && selectedLevel != Level.ALL &&
                     event.getLevel().intLevel() < selectedLevel.intLevel()) {
                     return;  // Skip logs weaker than selected level
@@ -627,18 +642,27 @@ public class LogViewerController {
                 // Store only plain text in buffer for UI (no ANSI codes)
                 // ANSI codes are only used when exporting to file with colors
                 logBuffer.offer(logLine);
+                int bufferSize = logBuffer.size();
+                log.debug("LogAppender: Added to buffer - BufferSize={}, Message={}", bufferSize, logLine);
                 while (logBuffer.size() > MAX_LOG_ENTRIES) {
                     logBuffer.poll();
                 }
 
                 // Update UI on JavaFX Application Thread
+                log.debug("LogAppender: Scheduling UI update on JavaFX thread");
                 Platform.runLater(() -> {
+                    log.debug("LogAppender: UI update task running on JavaFX thread");
                     try {
                         String searchText = searchField.getText().toLowerCase().trim();
                         boolean searchMatch = searchText.isEmpty() ||
                             logLine.toLowerCase().contains(searchText);
 
+                        log.debug("LogAppender: Search check - SearchText='{}', Match={}", searchText, searchMatch);
+
                         if (searchMatch) {
+                            String currentText = logTextArea.getText();
+                            log.debug("LogAppender: Adding to TextArea - CurrentLength={}, AddingLength={}",
+                                currentText.length(), logLine.length());
                             logTextArea.appendText(logLine + "\n");
 
                             // Limit text area size to prevent UI performance issues
@@ -652,12 +676,13 @@ public class LogViewerController {
 
                             // Auto-scroll if enabled
                             if (autoScroll) {
+                                log.debug("LogAppender: Auto-scrolling to bottom");
                                 logTextArea.setScrollTop(Double.MAX_VALUE);
                             }
                         }
                     } catch (Exception e) {
                         // Catch UI update errors to prevent appender from failing
-                        log.error("Error updating log viewer UI", e);
+                        log.error("LogAppender: Error updating log viewer UI", e);
                     }
                 });
             } catch (Exception e) {
