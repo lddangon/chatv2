@@ -106,16 +106,18 @@ public class LogViewerController {
             // Add listeners for UI components
             setupListeners();
 
-            // Schedule async appender initialization after UI is ready
-            // This prevents blocking the JavaFX Application Thread and allows
-            // Log4j2 context to fully initialize independently
+            // Load historical logs from file (if exists)
+            // This shows logs that were generated BEFORE LogViewer was opened
+            loadLogsFromFile();
+
+            // Schedule async appender initialization for NEW logs
             initializeAppenderAsync();
 
             log.info("LogViewerController initialized successfully");
         } catch (Exception e) {
-            // Catch any initialization errors to ensure UI is always functional
             log.error("Error during LogViewerController initialization", e);
-            // Even if UI initialization fails partially, try to initialize appender
+            // Still try to load logs and initialize appender on error
+            loadLogsFromFile();
             initializeAppenderAsync();
         }
     }
@@ -186,7 +188,7 @@ public class LogViewerController {
                 log.error("Failed to initialize custom Log4j2 appender after {} attempts", 
                     APPENDER_INIT_RETRY_COUNT, lastException);
                 appenderConfigured = false;
-                
+
                 // Show warning to user on JavaFX Application Thread
                 Platform.runLater(() -> {
                     try {
@@ -194,13 +196,11 @@ public class LogViewerController {
                             "Log Appender Not Configured",
                             "Live Log Capture Unavailable",
                             "The custom log appender could not be initialized. " +
-                            "Logs from file can still be viewed and exported."
+                            "Historical logs from file are displayed, but new logs will not appear in real-time."
                         );
-                        
-                        // Try to load existing logs from file as fallback
-                        loadLogsFromFile();
+                        // Historical logs were already loaded in initialize(), so no need to reload here
                     } catch (Exception e) {
-                        log.error("Error showing warning or loading logs from file", e);
+                        log.error("Error showing warning alert", e);
                     }
                 });
             }
@@ -320,9 +320,9 @@ public class LogViewerController {
             if (!loaded) {
                 log.warn("No readable log files found in expected locations");
                 Platform.runLater(() -> {
-                    logTextArea.appendText("Note: Live log capture is not available.\n");
-                    logTextArea.appendText("No existing log files found in standard locations.\n");
-                    logTextArea.appendText("Expected locations: logs/chat-server.log, logs/application.log\n");
+                    logTextArea.appendText("Note: No historical log files found.\n");
+                    logTextArea.appendText("Log viewer will display new logs as they are generated.\n");
+                    logTextArea.appendText("Expected locations: logs/chat.log, logs/application.log\n\n");
                 });
             }
         } catch (Exception e) {
