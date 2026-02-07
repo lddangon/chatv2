@@ -297,15 +297,23 @@ public class LogViewerController {
         
         try {
             // Common log file locations to search
+            // Based on log4j2.xml configuration:
+            // - fileName="logs/chat.log"
+            // - filePattern="logs/chat-%d{yyyy-MM-dd}-%i.log"
             String[] possibleLogPaths = {
-                "logs/chat-server.log",
+                "logs/chat.log",
                 "logs/application.log",
                 "logs/server.log",
-                System.getProperty("user.dir") + "/logs/chat-server.log",
-                System.getProperty("user.dir") + "/logs/application.log"
+                "logs/chat-server.log",
+                System.getProperty("user.dir") + "/logs/chat.log",
+                System.getProperty("user.dir") + "/logs/application.log",
+                System.getProperty("user.dir") + "/logs/server.log",
+                System.getProperty("user.dir") + "/logs/chat-server.log"
             };
 
             boolean loaded = false;
+            
+            // First try to find and load the main log file
             for (String logPath : possibleLogPaths) {
                 Path path = Paths.get(logPath);
                 if (Files.exists(path) && Files.isReadable(path)) {
@@ -316,13 +324,35 @@ public class LogViewerController {
                     }
                 }
             }
+            
+            // If main log file not found, try rolling files (with date pattern)
+            if (!loaded) {
+                log.debug("Main log file not found, searching for rolling files");
+                try {
+                    java.nio.file.DirectoryStream<Path> dirStream = Files.newDirectoryStream(Paths.get("logs"));
+                    for (Path file : dirStream) {
+                        String fileName = file.getFileName().toString();
+                        // Look for rolling files: chat-YYYY-MM-DD-N.log
+                        if (fileName.startsWith("chat-20") && fileName.endsWith(".log")) {
+                            log.info("Found rolling log file: {}", file);
+                            if (readLogFile(file)) {
+                                loaded = true;
+                                break;
+                            }
+                        }
+                    }
+                    dirStream.close();
+                } catch (IOException e) {
+                    log.debug("No logs directory found or error reading logs directory", e);
+                }
+            }
 
             if (!loaded) {
                 log.warn("No readable log files found in expected locations");
                 Platform.runLater(() -> {
                     logTextArea.appendText("Note: No historical log files found.\n");
                     logTextArea.appendText("Log viewer will display new logs as they are generated.\n");
-                    logTextArea.appendText("Expected locations: logs/chat.log, logs/application.log\n\n");
+                    logTextArea.appendText("Expected locations: logs/chat.log, logs/chat-YYYY-MM-DD-N.log\n");
                 });
             }
         } catch (Exception e) {
