@@ -2,7 +2,6 @@ package com.chatv2.server.gui.controller;
 
 import com.chatv2.server.gui.ServerAdminApp;
 import javafx.application.Platform;
-import javafx.embed.swing.JFXPanel;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.VBox;
@@ -58,12 +57,6 @@ class LogViewerControllerTest {
     
     @TempDir
     Path tempDir;
-    
-    @BeforeAll
-    static void initJavaFX() {
-        // Initialize JavaFX environment for tests
-        new JFXPanel();
-    }
     
     @Start
     private void start(Stage stage) {
