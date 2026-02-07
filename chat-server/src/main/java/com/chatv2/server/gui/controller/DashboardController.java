@@ -40,6 +40,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class DashboardController {
     private static final Logger log = LoggerFactory.getLogger(DashboardController.class);
+    private static final int MAX_CHART_POINTS = 20;
 
     private ServerAdminApp mainApp;
     private ScheduledExecutorService updateScheduler;
@@ -220,7 +221,7 @@ public class DashboardController {
         connectionSeries.getData().add(new XYChart.Data<>(timeLabel, stats.activeSessions()));
 
         // Limit chart data to last 20 points
-        if (messageSeries.getData().size() > 20) {
+        if (messageSeries.getData().size() > MAX_CHART_POINTS) {
             messageSeries.getData().remove(0);
             connectionSeries.getData().remove(0);
         }

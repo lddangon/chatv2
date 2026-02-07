@@ -109,6 +109,75 @@
     -fx-padding: 10px;
 }
 
+/* ==================== Chart Axes and Labels ==================== */
+.activity-chart .axis {
+    -fx-tick-label-fill: #cccccc;
+    -fx-tick-label-font-size: 11px;
+}
+
+.activity-chart .axis-label {
+    -fx-text-fill: #ffffff;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+}
+
+.activity-chart .chart-horizontal-grid-lines {
+    -fx-stroke: #3e3e42;
+    -fx-stroke-width: 1px;
+}
+
+.activity-chart .chart-vertical-grid-lines {
+    -fx-stroke: #3e3e42;
+    -fx-stroke-width: 1px;
+}
+
+.activity-chart .chart-alternative-row-fill {
+    -fx-fill: transparent;
+    -fx-stroke: transparent;
+}
+
+/* ==================== Chart Legend ==================== */
+.activity-chart .chart-legend {
+    -fx-background-color: transparent;
+    -fx-padding: 10px;
+}
+
+.activity-chart .chart-legend-item {
+    -fx-text-fill: #cccccc;
+    -fx-font-size: 12px;
+}
+
+.activity-chart .legend-item-symbol {
+    -fx-background-radius: 0px;
+}
+
+/* ==================== Chart Series Colors ==================== */
+.chart-series-line {
+    -fx-stroke-width: 2px;
+}
+
+.default-color0.chart-series-line { /* Messages series */
+    -fx-stroke: #4ec9b0;
+}
+
+.default-color1.chart-series-line { /* Connections series */
+    -fx-stroke: #0078d7;
+}
+
+/* ==================== Chart Background ==================== */
+.activity-chart .chart-content {
+    -fx-padding: 10px;
+}
+
+.activity-chart .chart-plot-background {
+    -fx-background-color: #1e1e1e;
+    -fx-background-insets: 0;
+}
+
+.activity-chart .chart-vertical-zero-line {
+    -fx-stroke: #3e3e42;
+}
+
 .section-title {
     -fx-text-fill: #cccccc;
     -fx-font-size: 16px;
