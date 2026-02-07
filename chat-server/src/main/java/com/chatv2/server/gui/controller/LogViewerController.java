@@ -207,8 +207,15 @@ public class LogViewerController {
     /**
      * Checks the log file for new entries.
      * Compares current file size with last known size and reads new content if changed.
+     * Prevents recursive logging that could cause infinite loop.
      */
     private void checkLogForNewEntries() {
+        // CRITICAL: Prevent recursive calls - if we're already reading, return immediately
+        // This protects against: LogViewer writes log → file grows → triggers reading again
+        if (isReadingFromFile) {
+            return;
+        }
+
         try {
             if (logFilePath == null || !Files.exists(logFilePath)) {
                 return;
@@ -319,12 +326,6 @@ public class LogViewerController {
                         });
                     }
 
-                    newEntriesCount++;
-                }
-
-                // Only log summary after reading is complete and flag is reset
-                if (newEntriesCount > 0) {
-                    log.debug("Read {} new log entries from file (recursive logging prevented)", newEntriesCount);
                 }
             }
 
