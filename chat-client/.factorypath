@@ -6,6 +6,8 @@
     <factorypathentry kind="VARJAR" id="M2_REPO/com/fasterxml/jackson/datatype/jackson-datatype-jsr310/2.16.1/jackson-datatype-jsr310-2.16.1.jar" enabled="true" runInBatchMode="false"/>
     <factorypathentry kind="VARJAR" id="M2_REPO/org/bouncycastle/bcprov-jdk18on/1.77/bcprov-jdk18on-1.77.jar" enabled="true" runInBatchMode="false"/>
     <factorypathentry kind="VARJAR" id="M2_REPO/io/netty/netty-buffer/4.1.109.Final/netty-buffer-4.1.109.Final.jar" enabled="true" runInBatchMode="false"/>
+    <factorypathentry kind="VARJAR" id="M2_REPO/io/netty/netty-handler/4.1.109.Final/netty-handler-4.1.109.Final.jar" enabled="true" runInBatchMode="false"/>
+    <factorypathentry kind="VARJAR" id="M2_REPO/io/netty/netty-codec/4.1.109.Final/netty-codec-4.1.109.Final.jar" enabled="true" runInBatchMode="false"/>
     <factorypathentry kind="VARJAR" id="M2_REPO/org/apache/logging/log4j/log4j-api/2.23.1/log4j-api-2.23.1.jar" enabled="true" runInBatchMode="false"/>
     <factorypathentry kind="VARJAR" id="M2_REPO/org/slf4j/slf4j-api/2.0.11/slf4j-api-2.0.11.jar" enabled="true" runInBatchMode="false"/>
     <factorypathentry kind="VARJAR" id="M2_REPO/commons-codec/commons-codec/1.16.0/commons-codec-1.16.0.jar" enabled="true" runInBatchMode="false"/>
@@ -13,7 +15,6 @@
     <factorypathentry kind="VARJAR" id="M2_REPO/com/chatv2/chat-encryption-aes/1.0.0/chat-encryption-aes-1.0.0.jar" enabled="true" runInBatchMode="false"/>
     <factorypathentry kind="VARJAR" id="M2_REPO/com/chatv2/chat-encryption-rsa/1.0.0/chat-encryption-rsa-1.0.0.jar" enabled="true" runInBatchMode="false"/>
     <factorypathentry kind="VARJAR" id="M2_REPO/io/netty/netty-all/4.1.109.Final/netty-all-4.1.109.Final.jar" enabled="true" runInBatchMode="false"/>
-    <factorypathentry kind="VARJAR" id="M2_REPO/io/netty/netty-codec/4.1.109.Final/netty-codec-4.1.109.Final.jar" enabled="true" runInBatchMode="false"/>
     <factorypathentry kind="VARJAR" id="M2_REPO/io/netty/netty-codec-dns/4.1.109.Final/netty-codec-dns-4.1.109.Final.jar" enabled="true" runInBatchMode="false"/>
     <factorypathentry kind="VARJAR" id="M2_REPO/io/netty/netty-codec-haproxy/4.1.109.Final/netty-codec-haproxy-4.1.109.Final.jar" enabled="true" runInBatchMode="false"/>
     <factorypathentry kind="VARJAR" id="M2_REPO/io/netty/netty-codec-http/4.1.109.Final/netty-codec-http-4.1.109.Final.jar" enabled="true" runInBatchMode="false"/>
@@ -26,7 +27,6 @@
     <factorypathentry kind="VARJAR" id="M2_REPO/io/netty/netty-codec-stomp/4.1.109.Final/netty-codec-stomp-4.1.109.Final.jar" enabled="true" runInBatchMode="false"/>
     <factorypathentry kind="VARJAR" id="M2_REPO/io/netty/netty-codec-xml/4.1.109.Final/netty-codec-xml-4.1.109.Final.jar" enabled="true" runInBatchMode="false"/>
     <factorypathentry kind="VARJAR" id="M2_REPO/io/netty/netty-common/4.1.109.Final/netty-common-4.1.109.Final.jar" enabled="true" runInBatchMode="false"/>
-    <factorypathentry kind="VARJAR" id="M2_REPO/io/netty/netty-handler/4.1.109.Final/netty-handler-4.1.109.Final.jar" enabled="true" runInBatchMode="false"/>
     <factorypathentry kind="VARJAR" id="M2_REPO/io/netty/netty-transport-native-unix-common/4.1.109.Final/netty-transport-native-unix-common-4.1.109.Final.jar" enabled="true" runInBatchMode="false"/>
     <factorypathentry kind="VARJAR" id="M2_REPO/io/netty/netty-handler-proxy/4.1.109.Final/netty-handler-proxy-4.1.109.Final.jar" enabled="true" runInBatchMode="false"/>
     <factorypathentry kind="VARJAR" id="M2_REPO/io/netty/netty-handler-ssl-ocsp/4.1.109.Final/netty-handler-ssl-ocsp-4.1.109.Final.jar" enabled="true" runInBatchMode="false"/>
