@@ -9,8 +9,7 @@ import com.chatv2.server.storage.DatabaseManager;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
-import io.netty.handler.codec.LengthFieldPrepender;
+
 import io.netty.handler.codec.string.StringDecoder;
 import io.netty.handler.codec.string.StringEncoder;
 import io.netty.util.CharsetUtil;
@@ -49,13 +48,10 @@ public class ServerInitializer extends ChannelInitializer<SocketChannel> {
     protected void initChannel(SocketChannel ch) {
         ChannelPipeline pipeline = ch.pipeline();
 
-        // Add length field decoder (handles packets larger than 10MB)
-        pipeline.addLast("frameDecoder", new LengthFieldBasedFrameDecoder(10485760, 16, 4, 0, 0));
-
-        // Add length field prepender (prepends length field before each packet)
-        pipeline.addLast("frameEncoder", new LengthFieldPrepender(4));
-
-        // Add binary message codec (implements PROTOCOL_SPEC.md)
+        // BinaryMessageCodec implements proper framing according to PROTOCOL_SPEC.md:
+        // - Parses PacketHeader (28 bytes) including payloadLength field
+        // - Validates payload + checksum based on payloadLength
+        // - No separate LengthFieldBasedFrameDecoder needed (would conflict)
         pipeline.addLast("messageCodec", new BinaryMessageCodec());
 
         // Add encryption handler (decrypts incoming, encrypts outgoing)

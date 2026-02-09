@@ -47,7 +47,14 @@ public class BinaryMessageCodec extends MessageToMessageCodec<ByteBuf, ChatMessa
                 payloadBytes = new byte[0];
             }
 
-            // 2. Create header
+            // 2. Validate payload size on encoding
+            if (payloadBytes.length > ProtocolConstants.MAX_PAYLOAD_SIZE) {
+                log.error("Payload too large for encoding: size={}, max={}", 
+                    payloadBytes.length, ProtocolConstants.MAX_PAYLOAD_SIZE);
+                throw new IllegalArgumentException("Payload size exceeds maximum allowed");
+            }
+
+            // 3. Create header
             short messageTypeCode = msg.getMessageType().getCode();
             byte flags = msg.getFlags();
             long timestamp = msg.getTimestamp();
@@ -62,19 +69,19 @@ public class BinaryMessageCodec extends MessageToMessageCodec<ByteBuf, ChatMessa
                 timestamp
             );
 
-            // 3. Allocate buffer (header + payload + checksum)
+            // 4. Allocate buffer (header + payload + checksum)
             int totalLength = PacketHeader.SIZE + payloadBytes.length + 4; // +4 for CRC32
             ByteBuf buffer = ctx.alloc().buffer(totalLength);
 
-            // 4. Write header
+            // 5. Write header
             ByteBuffer headerBuffer = ByteBuffer.allocate(PacketHeader.SIZE);
             header.write(headerBuffer);
             buffer.writeBytes(headerBuffer.array());
 
-            // 5. Write payload
+            // 6. Write payload
             buffer.writeBytes(payloadBytes);
 
-            // 6. Calculate and write CRC32 checksum
+            // 7. Calculate and write CRC32 checksum
             CRC32 crc32 = new CRC32();
             byte[] packetData = new byte[PacketHeader.SIZE + payloadBytes.length];
             buffer.getBytes(0, packetData);
@@ -115,7 +122,24 @@ public class BinaryMessageCodec extends MessageToMessageCodec<ByteBuf, ChatMessa
                 throw new IllegalStateException("Invalid packet header magic number");
             }
 
-            // 5. Check if we have enough bytes for payload + checksum
+            // 5. Validate payload size to prevent DoS attacks
+            if (header.payloadLength() < 0) {
+                String remoteAddress = ctx.channel().remoteAddress().toString();
+                log.warn("SECURITY ALERT: Negative payload length from {}: payloadLength={}",
+                    remoteAddress, header.payloadLength());
+                buf.resetReaderIndex();
+                throw new IllegalStateException("Negative payload length");
+            }
+
+            if (header.payloadLength() > ProtocolConstants.MAX_PAYLOAD_SIZE) {
+                String remoteAddress = ctx.channel().remoteAddress().toString();
+                log.warn("SECURITY ALERT: Potential DoS attack from {}: payloadLength={}, max={}",
+                    remoteAddress, header.payloadLength(), ProtocolConstants.MAX_PAYLOAD_SIZE);
+                buf.resetReaderIndex();
+                throw new IllegalStateException("Payload size exceeds maximum allowed");
+            }
+
+            // 7. Check if we have enough bytes for payload + checksum
             int requiredLength = header.payloadLength() + 4; // +4 for CRC32
             if (buf.readableBytes() < requiredLength) {
                 log.debug("Not enough bytes for payload + checksum: available={}, required={}",
@@ -124,11 +148,11 @@ public class BinaryMessageCodec extends MessageToMessageCodec<ByteBuf, ChatMessa
                 return; // Wait for more data
             }
 
-            // 6. Read payload
+            // 8. Read payload
             byte[] payloadBytes = new byte[header.payloadLength()];
             buf.readBytes(payloadBytes);
 
-            // 7. Read and validate CRC32 checksum
+            // 9. Read and validate CRC32 checksum
             int receivedChecksum = buf.readInt();
             CRC32 crc32 = new CRC32();
             crc32.update(headerBuffer.array());
@@ -141,7 +165,7 @@ public class BinaryMessageCodec extends MessageToMessageCodec<ByteBuf, ChatMessa
                 throw new IllegalStateException("CRC32 checksum mismatch");
             }
 
-            // 8. For encrypted or empty payload, keep as bytes
+            // 10. For encrypted or empty payload, keep as bytes
             // For unencrypted payload, deserialize from JSON
             byte[] finalPayloadBytes = payloadBytes;
             ChatMessage message = new ChatMessage(

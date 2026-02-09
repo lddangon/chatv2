@@ -13,7 +13,7 @@ public final class ProtocolConstants {
     public static final int PROTOCOL_VERSION = 1;
 
     // Message constraints
-    public static final int HEADER_SIZE = 32;
+    public static final int HEADER_SIZE = PacketHeader.SIZE; // 28
     public static final int MAX_PAYLOAD_SIZE = 10_485_760; // 10MB
     public static final int MAX_MESSAGE_SIZE = HEADER_SIZE + MAX_PAYLOAD_SIZE;
 
@@ -60,5 +60,5 @@ public final class ProtocolConstants {
     public static final int PAYLOAD_LENGTH_OFFSET = 16;
     public static final int TIMESTAMP_OFFSET = 20;
     public static final int CHECKSUM_OFFSET = 28;
-    public static final int PAYLOAD_OFFSET = 32;
+    public static final int PAYLOAD_OFFSET = 28; // PacketHeader.SIZE
 }
