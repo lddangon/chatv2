@@ -3,33 +3,36 @@ package com.chatv2.common.protocol;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.UUID;
+import java.util.zip.CRC32;
 
 /**
- * 28-byte packet header according to PROTOCOL_SPEC.md
+ * 40-byte packet header according to PROTOCOL_SPEC.md
  *
  * Format:
  * - Magic Number (4 bytes): 0x43 0x48 0x41 0x54 ("CHAT")
  * - Message Type (2 bytes): uint16 (ProtocolMessageType code)
  * - Version (1 byte): uint8 (protocol version 0x01)
  * - Flags (1 byte): uint8 (bitfield: encrypted, compressed, urgent, etc.)
- * - Message ID (8 bytes): first 8 bytes of UUID (compact storage)
+ * - Message ID (16 bytes): full UUID (mostSigBits + leastSigBits)
  * - Payload Length (4 bytes): uint32 (length of payload in bytes)
  * - Timestamp (8 bytes): uint64 (Unix milliseconds)
+ * - Checksum (4 bytes): uint32 (CRC32 of payload)
  *
- * Note: The full 4-byte checksum is stored AFTER the payload, not in the header.
- * Total packet structure: [Header: 28][Payload: N][Checksum: 4]
+ * Total packet structure: [Header: 40][Payload: N]
  */
 public record PacketHeader(
     int magic,              // 4 bytes: 0x43484154 ("CHAT")
     short messageType,      // 2 bytes: ProtocolMessageType code
     byte version,           // 1 byte: protocol version (0x01)
     byte flags,             // 1 byte: bitfield (ENCRYPTED, COMPRESSED, URGENT, etc.)
-    long messageId,         // 8 bytes: first 8 bytes of UUID (compact storage)
+    long mostSigBits,       // 8 bytes: most significant bits of UUID
+    long leastSigBits,      // 8 bytes: least significant bits of UUID (full UUID = 16 bytes)
     int payloadLength,      // 4 bytes: payload length in bytes
-    long timestamp          // 8 bytes: Unix milliseconds
+    long timestamp,         // 8 bytes: Unix milliseconds
+    int checksum            // 4 bytes: CRC32 of payload
 ) {
-    /** Size of the packet header in bytes (excluding checksum) */
-    public static final int SIZE = 28;
+    /** Size of the packet header in bytes */
+    public static final int SIZE = 40;
 
     /** Magic number for protocol identification: "CHAT" in ASCII */
     public static final int MAGIC = 0x43484154;
@@ -52,7 +55,7 @@ public record PacketHeader(
     /**
      * Reads a PacketHeader from the provided ByteBuffer.
      * The buffer must be in BIG_ENDIAN byte order.
-     * Reads exactly 28 bytes from the buffer position.
+     * Reads exactly 40 bytes from the buffer position.
      *
      * @param buffer ByteBuffer containing header data
      * @return PacketHeader instance
@@ -71,17 +74,19 @@ public record PacketHeader(
         short messageType = buffer.getShort();
         byte version = buffer.get();
         byte flags = buffer.get();
-        long messageId = buffer.getLong();
+        long mostSigBits = buffer.getLong();
+        long leastSigBits = buffer.getLong();
         int payloadLength = buffer.getInt();
         long timestamp = buffer.getLong();
+        int checksum = buffer.getInt();
 
-        return new PacketHeader(magic, messageType, version, flags, messageId, payloadLength, timestamp);
+        return new PacketHeader(magic, messageType, version, flags, mostSigBits, leastSigBits, payloadLength, timestamp, checksum);
     }
 
     /**
      * Writes this PacketHeader to the provided ByteBuffer.
      * The buffer must be in BIG_ENDIAN byte order.
-     * Writes exactly 28 bytes to the buffer position.
+     * Writes exactly 40 bytes to the buffer position.
      *
      * @param buffer ByteBuffer to write header data to
      * @throws IllegalArgumentException if buffer is null or has insufficient space
@@ -99,9 +104,11 @@ public record PacketHeader(
         buffer.putShort(messageType);
         buffer.put(version);
         buffer.put(flags);
-        buffer.putLong(messageId);
+        buffer.putLong(mostSigBits);
+        buffer.putLong(leastSigBits);
         buffer.putInt(payloadLength);
         buffer.putLong(timestamp);
+        buffer.putInt(checksum);
     }
 
     /**
@@ -109,20 +116,51 @@ public record PacketHeader(
      *
      * @param messageType ProtocolMessageType code
      * @param flags bitfield flags
-     * @param messageId UUID to extract 8 bytes from
+     * @param messageId full UUID for message identification
      * @param payloadLength length of payload in bytes
+     * @param payload payload data for checksum calculation
      * @return new PacketHeader instance
      */
-    public static PacketHeader create(short messageType, byte flags, UUID messageId, int payloadLength) {
+    public static PacketHeader create(short messageType, byte flags, UUID messageId, int payloadLength, byte[] payload) {
+        long mostSigBits = messageId != null ? messageId.getMostSignificantBits() : 0L;
+        long leastSigBits = messageId != null ? messageId.getLeastSignificantBits() : 0L;
+        int checksum = calculateChecksum(payload != null ? payload : new byte[0]);
+
         return new PacketHeader(
             MAGIC,
             messageType,
             VERSION,
             flags,
-            messageId != null ? messageId.getLeastSignificantBits() : 0L,
+            mostSigBits,
+            leastSigBits,
             payloadLength,
-            System.currentTimeMillis()
+            System.currentTimeMillis(),
+            checksum
         );
+    }
+
+    /**
+     * Calculates CRC32 checksum of payload data.
+     *
+     * @param payload payload data
+     * @return CRC32 checksum value
+     */
+    private static int calculateChecksum(byte[] payload) {
+        if (payload == null || payload.length == 0) {
+            return 0;
+        }
+        CRC32 crc32 = new CRC32();
+        crc32.update(payload);
+        return (int) crc32.getValue();
+    }
+
+    /**
+     * Gets the full UUID from most and least significant bits.
+     *
+     * @return full UUID
+     */
+    public UUID getMessageId() {
+        return new UUID(mostSigBits, leastSigBits);
     }
 
     /**
@@ -180,25 +218,13 @@ public record PacketHeader(
     }
 
     /**
-     * Converts the compact 8-byte message ID to a full UUID.
-     * Uses the compact ID as the least significant bits and a fixed
-     * most significant bits (0) for simplicity.
+     * Validates the payload checksum.
      *
-     * @return full UUID
+     * @param payload payload data to validate
+     * @return true if checksum matches payload data
      */
-    public UUID toFullUuid() {
-        // For compact storage, we use only 8 bytes (LSB)
-        // This can be expanded to full UUID if needed
-        return new UUID(0L, messageId);
-    }
-
-    /**
-     * Converts a full UUID to compact 8-byte storage.
-     *
-     * @param uuid full UUID
-     * @return 8-byte compact representation
-     */
-    public static long toCompactUuid(UUID uuid) {
-        return uuid != null ? uuid.getLeastSignificantBits() : 0L;
+    public boolean validateChecksum(byte[] payload) {
+        int calculatedChecksum = calculateChecksum(payload != null ? payload : new byte[0]);
+        return this.checksum == calculatedChecksum;
     }
 }

@@ -47,6 +47,8 @@ public class ServerSelectionController implements Initializable {
     private ObservableList<ServerInfo> serverList;
     private Timer refreshTimer;
     private boolean buttonsGloballyEnabled = true;
+    private final Object timerLock = new Object();
+    private Thread connectionThread;
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
@@ -129,6 +131,13 @@ public class ServerSelectionController implements Initializable {
         connectButton.setVisible(autoDiscovery);
         connectButton.setManaged(autoDiscovery);
 
+        // Управляем таймером автообновления в зависимости от режима
+        if (autoDiscovery) {
+            startAutoRefresh();
+        } else {
+            stopAutoRefresh();
+        }
+
         // Обновляем состояние кнопок при переключении режимов
         updateManualConnectButton();
     }
@@ -172,20 +181,59 @@ public class ServerSelectionController implements Initializable {
     /**
      * Starts auto-refresh timer.
      */
-    private void startAutoRefresh() {
-        refreshTimer = new Timer("ServerRefreshTimer", true);
-        refreshTimer.scheduleAtFixedRate(new TimerTask() {
-            @Override
-            public void run() {
-                Platform.runLater(() -> refreshServerList());
+    public void startAutoRefresh() {
+        synchronized (timerLock) {
+            // Check if timer is already running
+            if (refreshTimer != null) {
+                log.debug("Auto-refresh timer is already running");
+                return;
             }
-        }, 10000, 10000); // Refresh every 10 seconds
+
+            log.debug("Starting auto-refresh timer");
+            refreshTimer = new Timer("ServerRefreshTimer", true);
+            refreshTimer.scheduleAtFixedRate(new TimerTask() {
+                @Override
+                public void run() {
+                    Platform.runLater(() -> refreshServerList());
+                }
+            }, 10000, 10000); // Refresh every 10 seconds
+        }
+    }
+
+    /**
+     * Stops auto-refresh timer.
+     * Can be called when switching to manual mode or navigating to other screens.
+     */
+    public void stopAutoRefresh() {
+        synchronized (timerLock) {
+            if (refreshTimer != null) {
+                log.debug("Stopping auto-refresh timer");
+                refreshTimer.cancel();
+                refreshTimer = null;
+            }
+        }
+    }
+
+    /**
+     * Checks if auto-discovery mode is active.
+     *
+     * @return true if auto-discovery radio button is selected, false otherwise
+     */
+    public boolean isAutoDiscoveryMode() {
+        return autoDiscoveryRadio != null && autoDiscoveryRadio.isSelected();
     }
 
     /**
      * Refreshes the server list.
+     * Only executes in auto-discovery mode.
      */
     private void refreshServerList() {
+        // Skip refresh in manual mode
+        if (!autoDiscoveryRadio.isSelected()) {
+            log.debug("Skipping refresh: manual mode is active");
+            return;
+        }
+
         if (serverDiscovery == null) {
             return;
         }
@@ -265,11 +313,17 @@ public class ServerSelectionController implements Initializable {
     private void connectToServer(String host, int port) {
         log.info("Connecting to server {}:{}", host, port);
 
+        // Check if connection is already in progress
+        if (connectionThread != null && connectionThread.isAlive()) {
+            log.warn("Connection already in progress");
+            return;
+        }
+
         // Disable buttons
         setButtonsEnabled(false);
 
         // Connect in background
-        new Thread(() -> {
+        connectionThread = new Thread(() -> {
             try {
                 chatClient.connect(host, port).thenRun(() -> {
                     Platform.runLater(() -> {
@@ -290,8 +344,11 @@ public class ServerSelectionController implements Initializable {
                     showError("Connection error: " + e.getMessage());
                     setButtonsEnabled(true);
                 });
+            } finally {
+                connectionThread = null;
             }
-        }).start();
+        }, "ConnectionThread");
+        connectionThread.start();
     }
 
     /**
@@ -350,6 +407,22 @@ public class ServerSelectionController implements Initializable {
         alert.setHeaderText(null);
         alert.setContentText(message);
         alert.showAndWait();
+    }
+
+    /**
+     * Cleanup method to stop auto-refresh and interrupt connection thread.
+     */
+    public void cleanup() {
+        stopAutoRefresh();
+        if (connectionThread != null && connectionThread.isAlive()) {
+            connectionThread.interrupt();
+            try {
+                connectionThread.join(1000); // Wait up to 1 second
+            } catch (InterruptedException e) {
+                log.warn("Interrupted while waiting for connection thread to finish");
+            }
+            connectionThread = null;
+        }
     }
 
     /**

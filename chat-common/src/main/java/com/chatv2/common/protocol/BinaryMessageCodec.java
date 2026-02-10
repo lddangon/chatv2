@@ -18,8 +18,17 @@ import java.util.zip.CRC32;
  * This is a Netty MessageToMessageCodec that encodes/decodes protocol messages.
  *
  * Packet Format:
- * [PacketHeader: 28 bytes][Payload: N bytes][Checksum: 4 bytes]
- * Total: 28 + N + 4 bytes
+ * [PacketHeader: 40 bytes][Payload: N bytes]
+ * Total: 40 + N bytes
+ * Header structure:
+ *   [0-3]   Magic Number (4 bytes)
+ *   [4-5]   Message Type (2 bytes)
+ *   [6]     Version (1 byte)
+ *   [7]     Flags (1 byte)
+ *   [8-23]  Message ID - Full UUID (16 bytes)
+ *   [24-27] Payload Length (4 bytes)
+ *   [28-35] Timestamp (8 bytes)
+ *   [36-39] Checksum (4 bytes)
  *
  * Encoding: ChatMessage -> ByteBuf
  * Decoding: ByteBuf -> ChatMessage
@@ -67,7 +76,7 @@ public class BinaryMessageCodec extends MessageToMessageCodec<ByteBuf, ChatMessa
             }
 
             // Read payload length
-            int payloadLength = buf.getInt(buf.readerIndex() + 17); // Offset to payload length
+            int payloadLength = buf.getInt(buf.readerIndex() + 24); // Offset to payload length (after 16-byte UUID)
 
             // Check payload length to prevent OOM attacks
             if (payloadLength < 0 || payloadLength > MAX_PAYLOAD_SIZE) {

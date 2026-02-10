@@ -71,12 +71,13 @@ Client                                    Server
 │  0x04           2               MESSAGE_TYPE           Message type enum     │
 │  0x06           1               VERSION                Protocol version      │
 │  0x07           1               FLAGS                  Bitfield flags         │
-│  0x08           8               MESSAGE_ID             UUID (msg ID)        │
-│  0x10           4               PAYLOAD_LENGTH         Body length in bytes │
-│  0x14           8               TIMESTAMP              Unix epoch (ms)       │
-│  0x1C           4               CHECKSUM               CRC32 of body        │
-│  0x20           PAYLOAD_LENGTH  PAYLOAD                JSON body (optional) │
+│  0x08           16              MESSAGE_ID             Full UUID (msg ID)    │
+│  0x18           4               PAYLOAD_LENGTH         Body length in bytes │
+│  0x1C           8               TIMESTAMP              Unix epoch (ms)       │
+│  0x24           4               CHECKSUM               CRC32 of body        │
+│  0x28           PAYLOAD_LENGTH  PAYLOAD                JSON body (optional) │
 │                                                                              │
+│  HEADER_SIZE    40 bytes                                                         │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -111,8 +112,8 @@ Bit 2-0: RESERVED          - Must be zero
 ```
 
 #### 2.2.5 MESSAGE_ID
-- **Size:** 8 bytes
-- **Type:** UUID
+- **Size:** 16 bytes
+- **Type:** Full UUID (mostSigBits + leastSigBits)
 - **Purpose:** Unique message identifier for correlation and tracking
 
 #### 2.2.6 PAYLOAD_LENGTH
@@ -996,7 +997,8 @@ Header:
   01 20                            # MESSAGE_TYPE 0x0120 (AUTH_REGISTER_REQ)
   01                               # VERSION 1
   00                               # FLAGS (not encrypted)
-  55 0E 84 00 E2 9B 41 D4 71 64 44 66 55 44 00 00  # MESSAGE_ID (UUID)
+  55 0E 84 00 E2 9B 41 D4 71 64 44 66 55 44 00 00  # MESSAGE_ID (UUID mostSigBits)
+  00 00 00 00 00 00 00 00          # MESSAGE_ID (UUID leastSigBits)
   00 00 01 56                      # PAYLOAD_LENGTH (342 bytes)
   00 00 00 67 42 0F 00             # TIMESTAMP (1735670400000 ms)
   A1 B2 C3 D4                      # CHECKSUM (CRC32)
@@ -1020,7 +1022,8 @@ Header:
   01 22                            # MESSAGE_TYPE 0x0122 (AUTH_LOGIN_REQ)
   01                               # VERSION 1
   80                               # FLAGS (encrypted)
-  55 0E 84 00 E2 9B 41 D4 71 64 44 66 55 44 00 01  # MESSAGE_ID
+  55 0E 84 00 E2 9B 41 D4 71 64 44 66 55 44 00 01  # MESSAGE_ID (UUID mostSigBits)
+  00 00 00 00 00 00 00 00          # MESSAGE_ID (UUID leastSigBits)
   00 00 00 88                      # PAYLOAD_LENGTH (136 bytes = 16 IV + 16 Tag + 104 Data)
   00 00 00 67 42 0F 00             # TIMESTAMP
   1A 2B 3C 4D                      # CHECKSUM

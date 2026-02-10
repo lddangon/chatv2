@@ -8,7 +8,7 @@ import java.util.zip.CRC32;
 
 /**
  * Binary message structure for ChatV2 protocol.
- * Header is 40 bytes total.
+ * Header is 40 bytes total (including 16-byte UUID).
  */
 public class ChatMessage {
     // Header constants
@@ -65,37 +65,45 @@ public class ChatMessage {
      * Encodes message to byte array.
      */
     public byte[] encode() {
-        ByteBuffer buffer = ByteBuffer.allocate(HEADER_SIZE + payload.length);
-        buffer.order(ByteOrder.BIG_ENDIAN);
+        try {
+            ByteBuffer buffer = ByteBuffer.allocate(HEADER_SIZE + payload.length);
+            buffer.order(ByteOrder.BIG_ENDIAN);
 
-        // Magic Number (4 bytes)
-        buffer.putInt(MAGIC_NUMBER);
+            // Magic Number (4 bytes)
+            buffer.putInt(MAGIC_NUMBER);
 
-        // Message Type (2 bytes)
-        buffer.putShort(messageType.getCode());
+            // Message Type (2 bytes)
+            buffer.putShort(messageType.getCode());
 
-        // Version (1 byte)
-        buffer.put(version);
+            // Version (1 byte)
+            buffer.put(version);
 
-        // Flags (1 byte)
-        buffer.put(flags);
+            // Flags (1 byte)
+            buffer.put(flags);
 
-        // Message ID (8 bytes - UUID)
-        putUuid(buffer, messageId);
+            // Message ID (16 bytes - full UUID)
+            buffer.putLong(messageId.getMostSignificantBits());
+            buffer.putLong(messageId.getLeastSignificantBits());
 
-        // Payload Length (4 bytes)
-        buffer.putInt(payload.length);
+            // Payload Length (4 bytes)
+            buffer.putInt(payload.length);
 
-        // Timestamp (8 bytes)
-        buffer.putLong(timestamp);
+            // Timestamp (8 bytes)
+            buffer.putLong(timestamp);
 
-        // Checksum (4 bytes)
-        buffer.putInt(checksum);
+            // Checksum (4 bytes)
+            buffer.putInt(checksum);
 
-        // Payload
-        buffer.put(payload);
+            // Payload
+            if (payload.length > 0) {
+                buffer.put(payload);
+            }
 
-        return buffer.array();
+            return buffer.array();
+        } catch (Exception e) {
+            // Если возникла ошибка, выбросим RuntimeException
+            throw new RuntimeException("Failed to encode message", e);
+        }
     }
 
     /**

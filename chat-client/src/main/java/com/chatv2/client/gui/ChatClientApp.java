@@ -4,6 +4,7 @@ import com.chatv2.client.core.ChatClient;
 import com.chatv2.client.core.ClientConfig;
 import com.chatv2.client.core.ConnectionState;
 import com.chatv2.client.discovery.ServerDiscovery;
+import com.chatv2.client.gui.controller.ServerSelectionController;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
@@ -36,6 +37,8 @@ public class ChatClientApp extends Application {
     private Scene registrationScene;
     private Scene chatScene;
     private Scene profileScene;
+
+    private ServerSelectionController serverSelectionController;
 
     /**
      * Gets the singleton instance of the application.
@@ -107,6 +110,9 @@ public class ChatClientApp extends Application {
     @Override
     public void stop() throws Exception {
         log.info("Stopping ChatV2 Client GUI");
+        if (serverSelectionController != null) {
+            serverSelectionController.stopAutoRefresh();
+        }
         shutdown();
     }
 
@@ -120,6 +126,7 @@ public class ChatClientApp extends Application {
         Parent serverSelectionRoot = serverSelectionLoader.load();
         serverSelectionScene = new Scene(serverSelectionRoot, 900, 700);
         serverSelectionScene.getStylesheets().add(css);
+        serverSelectionController = serverSelectionLoader.getController();
 
         // Login Scene
         FXMLLoader loginLoader = new FXMLLoader(
@@ -155,6 +162,9 @@ public class ChatClientApp extends Application {
      */
     public void showServerSelectionScene() {
         Platform.runLater(() -> {
+            if (serverSelectionController != null && serverSelectionController.isAutoDiscoveryMode()) {
+                serverSelectionController.startAutoRefresh();
+            }
             primaryStage.setScene(serverSelectionScene);
             primaryStage.setTitle("ChatV2 Client - Select Server");
         });
@@ -164,6 +174,9 @@ public class ChatClientApp extends Application {
      * Shows the login scene.
      */
     public void showLoginScene() {
+        if (serverSelectionController != null) {
+            serverSelectionController.stopAutoRefresh();
+        }
         Platform.runLater(() -> {
             primaryStage.setScene(loginScene);
             primaryStage.setTitle("ChatV2 Client - Login");
@@ -174,6 +187,9 @@ public class ChatClientApp extends Application {
      * Shows the registration scene.
      */
     public void showRegistrationScene() {
+        if (serverSelectionController != null) {
+            serverSelectionController.stopAutoRefresh();
+        }
         Platform.runLater(() -> {
             primaryStage.setScene(registrationScene);
             primaryStage.setTitle("ChatV2 Client - Register");
@@ -225,6 +241,11 @@ public class ChatClientApp extends Application {
         log.info("Shutting down ChatV2 Client");
 
         try {
+            // Cleanup controller first
+            if (serverSelectionController != null) {
+                serverSelectionController.cleanup();
+            }
+            
             if (serverDiscovery != null) {
                 serverDiscovery.shutdown().join();
             }

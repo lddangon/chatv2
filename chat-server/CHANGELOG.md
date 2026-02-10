@@ -7,6 +7,69 @@
 
 ---
 
+## [1.0.3] - 2026-02-10
+
+### Changed
+- **Обновление формата заголовка протокола (Вариант 1)**
+  - HEADER_SIZE изменен с 32 на 40 байт (для поддержки 16-байтового полного UUID)
+  - MESSAGE_ID теперь составляет 16 байт (mostSigBits + leastSigBits)
+  - PAYLOAD_LENGTH смещен на байт 24 (после UUID)
+  - TIMESTAMP смещен на байт 28
+  - CHECKSUM смещен на байт 36
+
+### Fixed
+- **PacketHeader.java**
+  - SIZE константа обновлена до 40
+  - Javadoc обновлен с указанием 40-байтового заголовка
+  - Комментрии методов read()/write() обновлены для 40 байт
+
+- **ChatMessage.java**
+  - HEADER_SIZE обновлен до 40
+  - Javadoc обновлен с указанием 40-байтового заголовка
+
+- **ProtocolConstants.java**
+  - MESSAGE_ID_SIZE обновлен с 8 до 16 байт
+  - PAYLOAD_LENGTH_OFFSET обновлен с 16 до 24
+  - TIMESTAMP_OFFSET обновлен с 20 до 28
+  - CHECKSUM_OFFSET обновлен с 28 до 36
+  - PAYLOAD_OFFSET обновлен с 32 до 40
+
+- **BinaryMessageCodec.java**
+  - Payload Length offset обновлен с 16 до 24
+  - Javadoc обновлен для новой структуры заголовка
+  - Header structure таблица обновлена
+
+- **PROTOCOL_SPEC.md**
+  - Таблица MESSAGE STRUCTURE обновлена
+  - MESSAGE_ID размер обновлен до 16 байт
+  - Все смещения обновлены для согласованности
+  - Примеры hex дампов обновлены
+  - HEADER_SIZE указан как 40 байт
+
+- **README.md**
+  - Характеристики протокола обновлены
+  - Структура протокола обновлена
+  - Заголовок теперь указан как 40 байт
+
+### Test
+- Обновлены все тесты для соответствия новому формату:
+  - SimpleProtocolFixTest.java - HEADER_SIZE = 40
+  - ProtocolFixTest.java - HEADER_SIZE = 40
+  - PayloadLengthFixTest.java - HEADER_SIZE = 40
+
+### Technical Notes
+- Структура нового заголовка (40 байт):
+  - Bytes 0-3:   MAGIC_NUMBER (0x43484154)
+  - Bytes 4-5:   MESSAGE_TYPE
+  - Byte 6:      VERSION (0x01)
+  - Byte 7:      FLAGS
+  - Bytes 8-23:  MESSAGE_ID (Full UUID: mostSigBits + leastSigBits)
+  - Bytes 24-27: PAYLOAD_LENGTH
+  - Bytes 28-35: TIMESTAMP
+  - Bytes 36-39: CHECKSUM
+
+---
+
 ## [1.0.2] - 2026-02-09
 
 ### Security

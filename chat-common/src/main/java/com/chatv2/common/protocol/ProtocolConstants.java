@@ -46,19 +46,19 @@ public final class ProtocolConstants {
     public static final int MESSAGE_TYPE_SIZE = 2;
     public static final int VERSION_SIZE = 1;
     public static final int FLAGS_SIZE = 1;
-    public static final int MESSAGE_ID_SIZE = 8;
+    public static final int MESSAGE_ID_SIZE = 16;  // Full UUID (mostSigBits + leastSigBits)
     public static final int PAYLOAD_LENGTH_SIZE = 4;
     public static final int TIMESTAMP_SIZE = 8;
     public static final int CHECKSUM_SIZE = 4;
 
-    // Header offsets
+    // Header offsets (based on 40-byte header with 16-byte UUID)
     public static final int MAGIC_NUMBER_OFFSET = 0;
     public static final int MESSAGE_TYPE_OFFSET = 4;
     public static final int VERSION_OFFSET = 6;
     public static final int FLAGS_OFFSET = 7;
-    public static final int MESSAGE_ID_OFFSET = 8;
-    public static final int PAYLOAD_LENGTH_OFFSET = 16;
-    public static final int TIMESTAMP_OFFSET = 20;
-    public static final int CHECKSUM_OFFSET = 28;
-    public static final int PAYLOAD_OFFSET = 28; // PacketHeader.SIZE
+    public static final int MESSAGE_ID_OFFSET = 8;     // 16-byte UUID starts here
+    public static final int PAYLOAD_LENGTH_OFFSET = 24; // After 16-byte UUID (8 + 16 = 24)
+    public static final int TIMESTAMP_OFFSET = 28;      // 24 + 4 = 28
+    public static final int CHECKSUM_OFFSET = 36;      // 28 + 8 = 36
+    public static final int PAYLOAD_OFFSET = 40;       // Total header size
 }
