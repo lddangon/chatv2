@@ -8,6 +8,8 @@ import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.stage.FileChooser;
@@ -24,7 +26,7 @@ import java.util.ResourceBundle;
  * Handles user profile viewing and editing.
  */
 public class ProfileController implements Initializable {
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ProfileController.class);
+    private static final Logger log = LoggerFactory.getLogger(ProfileController.class);
 
     @FXML private ImageView avatarImageView;
     @FXML private Label usernameLabel;

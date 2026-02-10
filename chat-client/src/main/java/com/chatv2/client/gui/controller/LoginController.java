@@ -7,6 +7,8 @@ import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.URL;
 import java.util.Map;
@@ -17,6 +19,8 @@ import java.util.ResourceBundle;
  * Handles user authentication.
  */
 public class LoginController implements Initializable {
+    private static final Logger log = LoggerFactory.getLogger(LoginController.class);
+
     @FXML private TextField usernameField;
     @FXML private PasswordField passwordField;
     @FXML private CheckBox rememberMeCheckBox;
@@ -225,6 +229,4 @@ public class LoginController implements Initializable {
             log.error("Failed to save credentials", e);
         }
     }
-
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(LoginController.class);
 }

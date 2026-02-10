@@ -14,6 +14,8 @@ import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import javafx.scene.layout.VBox;
 import javafx.scene.layout.HBox;
 import javafx.scene.shape.Circle;
@@ -28,7 +30,7 @@ import java.util.UUID;
  * Handles message display, chat list, and participants.
  */
 public class ChatController implements Initializable {
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ChatController.class);
+    private static final Logger log = LoggerFactory.getLogger(ChatController.class);
 
     @FXML private ListView<ChatListItem> chatListView;
     @FXML private ScrollPane messageScrollPane;

@@ -39,7 +39,7 @@ public class ServerSelectionController implements Initializable {
     @FXML private TextField manualHostField;
     @FXML private TextField manualPortField;
     @FXML private VBox serverListContainer;
-    @FXML private HBox manualInputContainer;
+    @FXML private VBox manualInputContainer;
     @FXML private Button manualConnectButton;
 
     private ChatClient chatClient;

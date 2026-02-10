@@ -27,19 +27,24 @@ public class NetworkClient {
     private final com.chatv2.client.network.EncryptionHandler encryptionHandler;
 
     public NetworkClient() {
+        // Use AES-256-GCM for authenticated encryption
         this.encryptionHandler = new com.chatv2.client.network.EncryptionHandler(new EncryptionHandler.EncryptionService() {
             @Override
             public com.chatv2.common.crypto.EncryptionResult encrypt(byte[] plaintext, java.security.Key key) {
-                // Simple implementation for now
-                // TODO: Implement proper encryption
-                return new com.chatv2.common.crypto.EncryptionResult(plaintext, new byte[12], new byte[16]);
+                try {
+                    return com.chatv2.common.crypto.AesGcmCrypto.encrypt(plaintext, key);
+                } catch (Exception e) {
+                    throw new RuntimeException("Encryption failed", e);
+                }
             }
 
             @Override
             public byte[] decrypt(byte[] ciphertext, byte[] iv, byte[] tag, java.security.Key key) {
-                // Simple implementation for now
-                // TODO: Implement proper decryption
-                return ciphertext;
+                try {
+                    return com.chatv2.common.crypto.AesGcmCrypto.decrypt(ciphertext, iv, tag, key);
+                } catch (Exception e) {
+                    throw new RuntimeException("Decryption failed", e);
+                }
             }
         });
     }

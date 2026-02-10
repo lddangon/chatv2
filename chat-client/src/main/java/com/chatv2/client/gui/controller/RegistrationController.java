@@ -6,6 +6,8 @@ import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.stage.FileChooser;
@@ -14,6 +16,7 @@ import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.net.URL;
 import java.util.ResourceBundle;
 
@@ -34,8 +37,7 @@ public class RegistrationController implements Initializable {
     @FXML private Label errorLabel;
 
     private ChatClient chatClient;
-
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(RegistrationController.class);
+    private static final Logger log = LoggerFactory.getLogger(RegistrationController.class);
     private byte[] avatarData;
 
     @Override
@@ -110,9 +112,11 @@ public class RegistrationController implements Initializable {
                 ImageIO.write(resizedImage, "png", baos);
                 avatarData = baos.toByteArray();
 
-                // Display in ImageView
-                Image image = new Image(file.toURI().toString());
-                avatarImageView.setImage(image);
+                // Display in ImageView using FileInputStream for reliable loading
+                try (FileInputStream fis = new FileInputStream(file)) {
+                    Image image = new Image(fis);
+                    avatarImageView.setImage(image);
+                }
 
                 log.info("Avatar loaded: {} (size: {} bytes)", file.getName(), avatarData.length);
 

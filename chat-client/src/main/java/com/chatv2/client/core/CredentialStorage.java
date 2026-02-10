@@ -68,7 +68,7 @@ public class CredentialStorage {
             }
             
             // Encrypt password before storage
-            String encryptedPassword = CryptoUtils.encryptAES(password, encryptionKey.toString());
+            String encryptedPassword = CryptoUtils.encryptAES(password, new String(encryptionKey));
             
             if (useFileStorage) {
                 storeToFile(username, encryptedPassword, serverHost, serverPort);
@@ -102,7 +102,7 @@ public class CredentialStorage {
                 String encryptedPassword = credentials.get(KEY_PASSWORD);
                 if (encryptedPassword != null && !encryptedPassword.isBlank()) {
                     try {
-                        String decryptedPassword = CryptoUtils.decryptAES(encryptedPassword, encryptionKey.toString());
+                        String decryptedPassword = CryptoUtils.decryptAES(encryptedPassword, new String(encryptionKey));
                         credentials.put(KEY_PASSWORD, decryptedPassword);
                     } catch (Exception e) {
                         log.warn("Failed to decrypt password", e);

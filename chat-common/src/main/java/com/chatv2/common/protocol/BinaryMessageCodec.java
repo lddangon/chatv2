@@ -30,6 +30,9 @@ import java.util.zip.CRC32;
 public class BinaryMessageCodec extends MessageToMessageCodec<ByteBuf, ChatMessage> {
     private static final Logger log = LoggerFactory.getLogger(BinaryMessageCodec.class);
 
+    // Maximum payload size to prevent OOM attacks
+    private static final int MAX_PAYLOAD_SIZE = 10 * 1024 * 1024; // 10MB
+
     @Override
     protected void encode(ChannelHandlerContext ctx, ChatMessage msg, List<Object> out) throws Exception {
         try {
@@ -65,6 +68,15 @@ public class BinaryMessageCodec extends MessageToMessageCodec<ByteBuf, ChatMessa
 
             // Read payload length
             int payloadLength = buf.getInt(buf.readerIndex() + 17); // Offset to payload length
+
+            // Check payload length to prevent OOM attacks
+            if (payloadLength < 0 || payloadLength > MAX_PAYLOAD_SIZE) {
+                buf.resetReaderIndex();
+                throw new IllegalStateException(
+                    "Invalid payload length: " + payloadLength + " (max: " + MAX_PAYLOAD_SIZE + ")"
+                );
+            }
+
             int totalLength = ChatMessage.HEADER_SIZE + payloadLength;
 
             // Check if we have enough bytes

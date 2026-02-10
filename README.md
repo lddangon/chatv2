@@ -218,6 +218,7 @@
 - **Упрощение запуска**
   - Создан `build_and_run.bat` для полной сборки и запуска
   - Создан `run_server.bat` для запуска сервера с UTF-8 кодировкой
+  - Создан `run_client.bat` для запуска клиента с UTF-8 кодировкой
   - Все bat-скрипты поддерживают корректное отображение кириллицы
 
 - **Исправления серверного GUI**
@@ -354,21 +355,15 @@ run_server.bat
 
 #### Запуск клиента
 
-Для запуска клиента используется аналогичный подход:
-
 ```batch
-# После сборки проекта, запустите клиент
-java -jar chat-apps/chat-client-launcher/target/chat-client-launcher-1.0.0-jar-with-dependencies.jar
+# Запуск клиента (предварительно должен быть собран проект)
+run_client.bat
 ```
 
-Или создайте файл `run_client.bat`:
-```batch
-@echo off
-chcp 65001 >nul
-echo Starting ChatV2 Client...
-java -jar chat-apps/chat-client-launcher/target/chat-client-launcher-1.0.0-jar-with-dependencies.jar %*
-pause
-```
+Этот скрипт:
+1. Устанавливает кодировку UTF-8 (`chcp 65001`)
+2. Запускает клиент из JAR-файла `chat-apps/chat-client-launcher/target/chat-client-launcher-1.0.0-jar-with-dependencies.jar`
+3. Передаёт все аргументы командной строки приложению
 
 ### Сборка проекта (Maven)
 
@@ -578,13 +573,14 @@ ui:
 ```
  chatv2/
  ├── pom.xml                                    # Корневой Maven POM
- ├── README.md                                  # Этот файл
- ├── TECHNICAL_SPEC.md                          # Техническое задание
- ├── PROTOCOL_SPEC.md                           # Спецификация протокола
- ├── DEVELOPMENT_PLAN.md                        # План развития
- ├── build_and_run.bat                          # Скрипт полной сборки и запуска (Windows)
- ├── run_server.bat                             # Скрипт запуска сервера (Windows)
- ├── build_and_test.bat                         # Скрипт сборки и тестирования
+  ├── README.md                                  # Этот файл
+  ├── TECHNICAL_SPEC.md                          # Техническое задание
+  ├── PROTOCOL_SPEC.md                           # Спецификация протокола
+  ├── DEVELOPMENT_PLAN.md                        # План развития
+  ├── build_and_run.bat                          # Скрипт полной сборки и запуска (Windows)
+  ├── run_server.bat                             # Скрипт запуска сервера (Windows)
+  ├── run_client.bat                             # Скрипт запуска клиента (Windows)
+  ├── build_and_test.bat                         # Скрипт сборки и тестирования
  │
 ├── chat-common/                               # Общий модуль
 │   ├── pom.xml

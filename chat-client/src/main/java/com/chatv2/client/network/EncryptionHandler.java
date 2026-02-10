@@ -123,13 +123,11 @@ public class EncryptionHandler extends ChannelDuplexHandler {
      * Determines if a message should be encrypted.
      */
     private boolean shouldEncrypt(ChatMessage message) {
-        // Don't encrypt if encryption is not enabled
+        // Если encryptionEnabled false ИЛИ sessionKey null - не шифровать
         if (!encryptionEnabled || sessionKey == null) {
             return false;
         }
-        
-        // Check if encryption is required for this message type
-        // Some messages (like handshake) are sent unencrypted
+        // Не шифровать сообщения handshake
         return !message.getMessageType().name().startsWith("AUTH_HANDSHAKE");
     }
 
