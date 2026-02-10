@@ -131,7 +131,7 @@ public class ServerDiscovery {
         try {
             String clientId = CryptoUtils.generateUuid();
             String request = String.format(
-                "SERVICE_DISCOVERY_REQ:%s:%s:%s:%s:%s",
+                "SERVICE_DISCOVERY_REQ:%s:%s:%s:%s",
                 clientId,
                 "1.0.0",
                 "Windows",

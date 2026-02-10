@@ -25,7 +25,6 @@ public class LoginController implements Initializable {
     @FXML private PasswordField passwordField;
     @FXML private CheckBox rememberMeCheckBox;
     @FXML private Button loginButton;
-    @FXML private Button registerButton;
     @FXML private Button backButton;
     @FXML private Label errorLabel;
 
@@ -44,7 +43,6 @@ public class LoginController implements Initializable {
 
         // Setup button actions
         loginButton.setOnAction(e -> handleLogin());
-        registerButton.setOnAction(e -> handleRegister());
         backButton.setOnAction(e -> handleBack());
 
         // Setup enter key for login
