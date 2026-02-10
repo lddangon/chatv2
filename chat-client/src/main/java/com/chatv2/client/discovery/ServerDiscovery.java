@@ -1,6 +1,9 @@
 package com.chatv2.client.discovery;
 
 import com.chatv2.common.crypto.CryptoUtils;
+import com.chatv2.common.discovery.DiscoveryPacket;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -8,7 +11,6 @@ import java.net.*;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -17,6 +19,7 @@ import java.util.function.Consumer;
 
 /**
  * Server discovery via UDP multicast.
+ * Supports both JSON format (primary) and legacy text format for backward compatibility.
  */
 public class ServerDiscovery {
     private static final Logger log = LoggerFactory.getLogger(ServerDiscovery.class);
@@ -31,11 +34,18 @@ public class ServerDiscovery {
     private final ConcurrentHashMap<String, ServerInfo> discoveredServers = new ConcurrentHashMap<>();
     private final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
     private final List<Consumer<ServerInfo>> listeners = new ArrayList<>();
+    
+    // Jackson ObjectMapper for JSON deserialization
+    private final ObjectMapper objectMapper;
 
     public ServerDiscovery(String multicastAddress, int multicastPort, int timeoutSeconds) {
         this.multicastAddress = multicastAddress;
         this.multicastPort = multicastPort;
         this.timeoutSeconds = timeoutSeconds;
+        
+        // Configure ObjectMapper for JSON deserialization
+        this.objectMapper = new ObjectMapper();
+        this.objectMapper.registerModule(new JavaTimeModule());
     }
 
     /**
@@ -167,6 +177,9 @@ public class ServerDiscovery {
 
                     if (response.contains("SERVICE_DISCOVERY_RES")) {
                         parseDiscoveryResponse(response, packet.getAddress().getHostAddress());
+                    } else {
+                        // Try to parse as JSON (server response without marker)
+                        tryParseJsonResponse(response, packet.getAddress().getHostAddress());
                     }
                 } catch (Exception e) {
                     if (running) {
@@ -178,10 +191,80 @@ public class ServerDiscovery {
     }
 
     /**
+     * Tries to parse the response as JSON format.
+     * 
+     * @param response the raw response string
+     * @param senderAddress the sender's IP address
+     * @return true if parsed successfully as JSON, false otherwise
+     */
+    private boolean tryParseJsonResponse(String response, String senderAddress) {
+        try {
+            // Trim whitespace and check if it looks like JSON
+            String trimmedResponse = response.trim();
+            if (!trimmedResponse.startsWith("{") || !trimmedResponse.endsWith("}")) {
+                return false;
+            }
+
+            // Parse JSON
+            DiscoveryPacket packet = objectMapper.readValue(trimmedResponse, DiscoveryPacket.class);
+            
+            // Validate required fields
+            if (packet.serverId() == null || packet.serverId().isBlank() ||
+                packet.serverName() == null || packet.serverName().isBlank()) {
+                log.warn("Invalid discovery packet - missing required fields");
+                return false;
+            }
+
+            // Create ServerInfo from DiscoveryPacket
+            ServerInfo serverInfo = new ServerInfo(
+                packet.serverId(),
+                packet.serverName(),
+                packet.address() != null && !packet.address().isBlank() ? packet.address() : senderAddress,
+                packet.port(),
+                packet.version() != null ? packet.version() : "1.0.0",
+                packet.encryptionRequired(),
+                packet.encryptionType() != null ? packet.encryptionType() : "NONE",
+                packet.currentUsers(),
+                packet.maxUsers(),
+                Instant.now()
+            );
+
+            // Check server state - only accept active servers
+            if (packet.state() != null && !"ACTIVE".equals(packet.state())) {
+                log.debug("Ignoring server {} with state: {}", packet.serverName(), packet.state());
+                return false;
+            }
+
+            // Store server info
+            discoveredServers.put(serverInfo.serverId(), serverInfo);
+
+            log.info("Discovered server (JSON): {} at {}:{}", serverInfo.serverName(),
+                serverInfo.address(), serverInfo.port());
+
+            // Notify listeners
+            listeners.forEach(listener -> listener.accept(serverInfo));
+            return true;
+
+        } catch (Exception e) {
+            log.debug("Failed to parse as JSON: {}", e.getMessage());
+            return false;
+        }
+    }
+
+    /**
      * Parses a discovery response.
+     * Supports both legacy text format with ':' delimiter and JSON format.
      */
     private void parseDiscoveryResponse(String response, String senderAddress) {
         try {
+            // First try JSON format
+            if (response.trim().startsWith("{")) {
+                if (tryParseJsonResponse(response, senderAddress)) {
+                    return;
+                }
+            }
+
+            // Fall back to legacy text format for backward compatibility
             String[] parts = response.split(":");
             if (parts.length >= 10) {
                 ServerInfo serverInfo = new ServerInfo(
@@ -200,7 +283,7 @@ public class ServerDiscovery {
                 // Store server info
                 discoveredServers.put(serverInfo.serverId(), serverInfo);
 
-                log.info("Discovered server: {} at {}:{}", serverInfo.serverName(),
+                log.info("Discovered server (legacy): {} at {}:{}", serverInfo.serverName(),
                     serverInfo.address(), serverInfo.port());
 
                 // Notify listeners

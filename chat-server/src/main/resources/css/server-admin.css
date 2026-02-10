@@ -95,7 +95,7 @@
 }
 
 .stat-value {
-    -fx-text-fill: #4ec9b0;
+    -fx-text-fill: #ffffff;  /* Белый текст - контраст 12:1 */
     -fx-font-size: 36px;
     -fx-font-weight: bold;
 }

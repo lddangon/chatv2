@@ -46,6 +46,7 @@ public class ServerSelectionController implements Initializable {
     private ServerDiscovery serverDiscovery;
     private ObservableList<ServerInfo> serverList;
     private Timer refreshTimer;
+    private boolean buttonsGloballyEnabled = true;
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
@@ -89,6 +90,17 @@ public class ServerSelectionController implements Initializable {
         serverListView.getSelectionModel().selectedItemProperty().addListener(
             (obs, oldVal, newVal) -> updateConnectButton());
 
+        // Setup manual input field listeners
+        manualHostField.textProperty().addListener((obs, oldVal, newVal) -> {
+            log.debug("Manual host field changed: '{}'", newVal);
+            updateManualConnectButton();
+        });
+
+        manualPortField.textProperty().addListener((obs, oldVal, newVal) -> {
+            log.debug("Manual port field changed: '{}'", newVal);
+            updateManualConnectButton();
+        });
+
         // Start server discovery
         startServerDiscovery();
 
@@ -96,6 +108,7 @@ public class ServerSelectionController implements Initializable {
         startAutoRefresh();
 
         updateConnectButton();
+        updateManualConnectButton();
     }
 
     /**
@@ -107,6 +120,17 @@ public class ServerSelectionController implements Initializable {
         serverListContainer.setManaged(autoDiscovery);
         manualInputContainer.setVisible(!autoDiscovery);
         manualInputContainer.setManaged(!autoDiscovery);
+
+        // Включаем/отключаем manualConnectButton
+        manualConnectButton.setVisible(!autoDiscovery);
+        manualConnectButton.setManaged(!autoDiscovery);
+
+        // Инвертируем логику для кнопки connectButton
+        connectButton.setVisible(autoDiscovery);
+        connectButton.setManaged(autoDiscovery);
+
+        // Обновляем состояние кнопок при переключении режимов
+        updateManualConnectButton();
     }
 
     /**
@@ -275,16 +299,46 @@ public class ServerSelectionController implements Initializable {
      */
     private void updateConnectButton() {
         ServerInfo selected = serverListView.getSelectionModel().getSelectedItem();
-        connectButton.setDisable(selected == null);
+        connectButton.setDisable(selected == null || !buttonsGloballyEnabled);
+    }
+
+    /**
+     * Updates manual connect button state based on field values.
+     */
+    private void updateManualConnectButton() {
+        String host = manualHostField.getText().trim();
+        String portText = manualPortField.getText().trim();
+
+        boolean isHostValid = !host.isEmpty();
+        boolean isPortValid = false;
+
+        if (!portText.isEmpty()) {
+            try {
+                int port = Integer.parseInt(portText);
+                isPortValid = port >= 1 && port <= 65535;
+                log.debug("Port validation: '{}' -> valid={}, value={}", portText, isPortValid, port);
+            } catch (NumberFormatException e) {
+                log.debug("Port validation: '{}' -> invalid (not a number)", portText);
+                isPortValid = false;
+            }
+        }
+
+        boolean shouldEnable = isHostValid && isPortValid && buttonsGloballyEnabled;
+        manualConnectButton.setDisable(!shouldEnable);
+        log.debug("Manual connect button state: hostValid={}, portValid={}, globallyEnabled={}, buttonEnabled={}",
+                isHostValid, isPortValid, buttonsGloballyEnabled, shouldEnable);
     }
 
     /**
      * Enables/disables buttons.
      */
     private void setButtonsEnabled(boolean enabled) {
+        log.debug("Setting buttons globally enabled: {}", enabled);
+        buttonsGloballyEnabled = enabled;
         refreshButton.setDisable(!enabled);
         connectButton.setDisable(!enabled);
-        manualConnectButton.setDisable(!enabled);
+        updateConnectButton();
+        updateManualConnectButton();
     }
 
     /**
@@ -315,7 +369,7 @@ public class ServerSelectionController implements Initializable {
 
             nameLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 14px;");
             statusLabel.setStyle("-fx-font-size: 12px;");
-            detailsLabel.setStyle("-fx-font-size: 11px; -fx-text-fill: #666;");
+            detailsLabel.setStyle("-fx-font-size: 11px; -fx-text-fill: #c0c0c0;");
 
             headerBox.getChildren().addAll(nameLabel, statusLabel, statusIndicator);
             content.getChildren().addAll(headerBox, detailsLabel);

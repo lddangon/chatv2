@@ -1,5 +1,6 @@
 package com.chatv2.server.discovery;
 
+import com.chatv2.common.discovery.DiscoveryPacket;
 import com.chatv2.server.config.ServerProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -265,80 +266,5 @@ public class ServerDiscoveryBroadcaster implements Runnable {
      */
     public int getBroadcastInterval() {
         return broadcastInterval;
-    }
-    
-    /**
-     * Discovery packet record for UDP multicast.
-     * Contains server information for client discovery.
-     */
-    public record DiscoveryPacket(
-        String serverId,
-        String serverName,
-        String address,
-        int port,
-        String version,
-        int maxUsers,
-        int currentUsers,
-        boolean encryptionRequired,
-        String encryptionType,
-        String state
-    ) {
-        /**
-         * Creates a discovery packet with validation.
-         */
-        public DiscoveryPacket {
-            if (serverId == null || serverId.isBlank()) {
-                serverId = UUID.randomUUID().toString();
-            }
-            if (serverName == null || serverName.isBlank()) {
-                throw new IllegalArgumentException("Server name cannot be null or blank");
-            }
-            if (address == null || address.isBlank()) {
-                throw new IllegalArgumentException("Address cannot be null or blank");
-            }
-            if (port < 1 || port > 65535) {
-                throw new IllegalArgumentException("Port must be between 1 and 65535");
-            }
-            if (version == null || version.isBlank()) {
-                version = "1.0.0";
-            }
-            if (maxUsers < 1) {
-                maxUsers = 1000;
-            }
-            if (currentUsers < 0) {
-                currentUsers = 0;
-            }
-            if (state == null || state.isBlank()) {
-                state = "ACTIVE";
-            }
-        }
-        
-        /**
-         * Checks if the server is full.
-         *
-         * @return true if server is at capacity
-         */
-        public boolean isFull() {
-            return currentUsers >= maxUsers;
-        }
-        
-        /**
-         * Calculates server load percentage.
-         *
-         * @return load as percentage (0.0 to 100.0)
-         */
-        public double getLoadPercentage() {
-            return (double) currentUsers / maxUsers * 100.0;
-        }
-        
-        /**
-         * Gets the display string for the server.
-         *
-         * @return formatted display string
-         */
-        public String getDisplayString() {
-            return String.format("%s (%s:%d) - %d/%d users [%s]",
-                serverName, address, port, currentUsers, maxUsers, state);
-        }
     }
 }
