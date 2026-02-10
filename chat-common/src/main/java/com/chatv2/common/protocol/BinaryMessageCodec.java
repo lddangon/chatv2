@@ -33,65 +33,11 @@ public class BinaryMessageCodec extends MessageToMessageCodec<ByteBuf, ChatMessa
     @Override
     protected void encode(ChannelHandlerContext ctx, ChatMessage msg, List<Object> out) throws Exception {
         try {
-            // 1. Serialize payload to JSON using MessageCodec
-            byte[] payloadBytes;
-            Object payload = msg.getPayload();
-            if (payload instanceof byte[]) {
-                // Payload is already bytes (e.g., encrypted data)
-                payloadBytes = (byte[]) payload;
-            } else if (payload != null) {
-                // Serialize object to JSON
-                String jsonPayload = MessageCodec.encode(payload);
-                payloadBytes = jsonPayload.getBytes(StandardCharsets.UTF_8);
-            } else {
-                payloadBytes = new byte[0];
-            }
-
-            // 2. Validate payload size on encoding
-            if (payloadBytes.length > ProtocolConstants.MAX_PAYLOAD_SIZE) {
-                log.error("Payload too large for encoding: size={}, max={}", 
-                    payloadBytes.length, ProtocolConstants.MAX_PAYLOAD_SIZE);
-                throw new IllegalArgumentException("Payload size exceeds maximum allowed");
-            }
-
-            // 3. Create header
-            short messageTypeCode = msg.getMessageType().getCode();
-            byte flags = msg.getFlags();
-            long timestamp = msg.getTimestamp();
-
-            PacketHeader header = new PacketHeader(
-                PacketHeader.MAGIC,
-                messageTypeCode,
-                PacketHeader.VERSION,
-                flags,
-                PacketHeader.toCompactUuid(msg.getMessageId()),
-                payloadBytes.length,
-                timestamp
-            );
-
-            // 4. Allocate buffer (header + payload + checksum)
-            int totalLength = PacketHeader.SIZE + payloadBytes.length + 4; // +4 for CRC32
-            ByteBuf buffer = ctx.alloc().buffer(totalLength);
-
-            // 5. Write header
-            ByteBuffer headerBuffer = ByteBuffer.allocate(PacketHeader.SIZE);
-            header.write(headerBuffer);
-            buffer.writeBytes(headerBuffer.array());
-
-            // 6. Write payload
-            buffer.writeBytes(payloadBytes);
-
-            // 7. Calculate and write CRC32 checksum
-            CRC32 crc32 = new CRC32();
-            byte[] packetData = new byte[PacketHeader.SIZE + payloadBytes.length];
-            buffer.getBytes(0, packetData);
-            crc32.update(packetData);
-            buffer.writeInt((int) crc32.getValue());
-
-            out.add(buffer);
+            // Use ChatMessage.encode() directly to avoid format mismatch
+            byte[] messageBytes = msg.encode();
+            out.add(ctx.alloc().buffer(messageBytes.length).writeBytes(messageBytes));
             log.debug("Encoded message: type={}, payloadLength={}, totalLength={}",
-                msg.getMessageType(), payloadBytes.length, totalLength);
-
+                msg.getMessageType(), msg.getPayload().length, messageBytes.length);
         } catch (Exception e) {
             log.error("Failed to encode message", e);
             throw e;
@@ -101,83 +47,40 @@ public class BinaryMessageCodec extends MessageToMessageCodec<ByteBuf, ChatMessa
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf buf, List<Object> out) throws Exception {
         try {
-            // 1. Check minimum length for header
-            if (buf.readableBytes() < PacketHeader.SIZE) {
-                log.debug("Not enough bytes for header: {}", buf.readableBytes());
+            // Use ChatMessage.decode() directly to avoid format mismatch
+            // Check minimum length for header
+            if (buf.readableBytes() < ChatMessage.HEADER_SIZE) {
                 return; // Wait for more data
             }
 
-            // 2. Mark reader index for rollback on error
+            // Mark reader index for rollback on error
             buf.markReaderIndex();
 
-            // 3. Read header
-            ByteBuffer headerBuffer = ByteBuffer.allocate(PacketHeader.SIZE);
-            buf.readBytes(headerBuffer.array());
-            PacketHeader header = PacketHeader.read(headerBuffer);
-
-            // 4. Validate magic number
-            if (header.magic() != PacketHeader.MAGIC) {
-                log.error("Invalid magic number: 0x{}", String.format("%08X", header.magic()));
+            // Read header to determine total message length
+            int magicNumber = buf.getInt(buf.readerIndex());
+            if (magicNumber != ChatMessage.MAGIC_NUMBER) {
                 buf.resetReaderIndex();
-                throw new IllegalStateException("Invalid packet header magic number");
+                throw new IllegalStateException("Invalid magic number: 0x" + Integer.toHexString(magicNumber));
             }
 
-            // 5. Validate payload size to prevent DoS attacks
-            if (header.payloadLength() < 0) {
-                String remoteAddress = ctx.channel().remoteAddress().toString();
-                log.warn("SECURITY ALERT: Negative payload length from {}: payloadLength={}",
-                    remoteAddress, header.payloadLength());
-                buf.resetReaderIndex();
-                throw new IllegalStateException("Negative payload length");
-            }
+            // Read payload length
+            int payloadLength = buf.getInt(buf.readerIndex() + 17); // Offset to payload length
+            int totalLength = ChatMessage.HEADER_SIZE + payloadLength;
 
-            if (header.payloadLength() > ProtocolConstants.MAX_PAYLOAD_SIZE) {
-                String remoteAddress = ctx.channel().remoteAddress().toString();
-                log.warn("SECURITY ALERT: Potential DoS attack from {}: payloadLength={}, max={}",
-                    remoteAddress, header.payloadLength(), ProtocolConstants.MAX_PAYLOAD_SIZE);
-                buf.resetReaderIndex();
-                throw new IllegalStateException("Payload size exceeds maximum allowed");
-            }
-
-            // 7. Check if we have enough bytes for payload + checksum
-            int requiredLength = header.payloadLength() + 4; // +4 for CRC32
-            if (buf.readableBytes() < requiredLength) {
-                log.debug("Not enough bytes for payload + checksum: available={}, required={}",
-                    buf.readableBytes(), requiredLength);
+            // Check if we have enough bytes
+            if (buf.readableBytes() < totalLength) {
                 buf.resetReaderIndex();
                 return; // Wait for more data
             }
 
-            // 8. Read payload
-            byte[] payloadBytes = new byte[header.payloadLength()];
-            buf.readBytes(payloadBytes);
-
-            // 9. Read and validate CRC32 checksum
-            int receivedChecksum = buf.readInt();
-            CRC32 crc32 = new CRC32();
-            crc32.update(headerBuffer.array());
-            crc32.update(payloadBytes);
-            int calculatedChecksum = (int) crc32.getValue();
-
-            if (receivedChecksum != calculatedChecksum) {
-                log.error("CRC32 checksum mismatch: received={}, calculated={}",
-                    receivedChecksum, calculatedChecksum);
-                throw new IllegalStateException("CRC32 checksum mismatch");
-            }
-
-            // 10. For encrypted or empty payload, keep as bytes
-            // For unencrypted payload, deserialize from JSON
-            byte[] finalPayloadBytes = payloadBytes;
-            ChatMessage message = new ChatMessage(
-                ProtocolMessageType.fromCode(header.messageType()),
-                header.flags(),
-                header.toFullUuid(),
-                header.timestamp(),
-                finalPayloadBytes.length > 0 ? finalPayloadBytes : null
-            );
-
+            // Read the complete message
+            byte[] messageBytes = new byte[totalLength];
+            buf.readBytes(messageBytes);
+            
+            // Decode the message
+            ChatMessage message = ChatMessage.decode(messageBytes);
             out.add(message);
-            log.debug("Decoded message: type={}, payloadLength={}", header.messageType(), payloadBytes.length);
+            log.debug("Decoded message: type={}, payloadLength={}", message.getMessageType(), message.getPayload().length);
 
         } catch (Exception e) {
             log.error("Failed to decode message", e);

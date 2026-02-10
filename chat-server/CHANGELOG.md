@@ -7,6 +7,68 @@
 
 ---
 
+## [1.0.2] - 2026-02-09
+
+### Security
+- **Критическая уязвимость DoS: отсутствие проверки MAX_PAYLOAD_SIZE**
+  - Добавлена проверка MAX_PAYLOAD_SIZE = 10MB в decode()
+  - Добавлено SECURITY ALERT логирование для подозрительных попыток
+  - При превышении лимита выбрасывается IllegalStateException
+
+- **Критическая уязвимость: отрицательные значения payloadLength**
+  - Добавлена проверка на отрицательные значения в decode()
+  - Добавлено SECURITY ALERT логирование с IP-адресом атакующего
+  - При отрицательном значении выбрасывается IllegalStateException
+
+- **Важная уязвимость: отсутствие проверки в encode()**
+  - Добавлена проверка MAX_PAYLOAD_SIZE в encode()
+  - При превышении лимита выбрасывается IllegalArgumentException
+
+### Fix
+- **Исправление критической ошибки TooLongFrameException**
+  - Удалены LengthFieldBasedFrameDecoder и LengthFieldPrepender из ServerInitializer
+  - Удалены LengthFieldBasedFrameDecoder и LengthFieldPrepender из ClientInitializer
+  - BinaryMessageCodec теперь единственным образом реализует фрейминг согласно PROTOCOL_SPEC.md
+  - Конфликт между декодерами устранен
+
+- **Исправление констант HEADER_SIZE и PAYLOAD_OFFSET**
+  - Обновлены значения для согласования с PROTOCOL_SPEC.md
+  - HEADER_SIZE = 28 (PacketHeader.SIZE)
+  - PAYLOAD_OFFSET = 28 (PacketHeader.SIZE)
+
+### Test
+- **Добавлен BinaryMessageCodecDoSTest**
+  - `testRejectOversizedPayload()` - Отклонение oversized сообщений (>10MB)
+  - `testAcceptNormalSizePayload()` - Прием нормальных сообщений (<10MB)
+  - `testRejectNegativePayloadLength()` - Отклонение отрицательных значений payloadLength
+  - `testRejectEncodingOversizedPayload()` - Отклонение кодирования oversized сообщений
+  - Все 4 теста прошли успешно
+
+### Changed
+- `BinaryMessageCodec.java`:
+  - Добавлена валидация payloadSize в encode()
+  - Добавлена валидация payloadLength >= 0 в decode()
+  - Добавлена валидация payloadLength <= MAX_PAYLOAD_SIZE в decode()
+  - Добавлено SECURITY ALERT логирование с remoteAddress
+
+- `ServerInitializer.java`:
+  - Удален LengthFieldBasedFrameDecoder из pipeline
+  - Добавлен комментарий о том, что BinaryMessageCodec реализует фрейминг
+  - Упрощена архитектура pipeline
+
+- `ClientInitializer.java`:
+  - Удален LengthFieldBasedFrameDecoder из pipeline
+  - Добавлен комментарий о том, что BinaryMessageCodec реализует фрейминг
+  - Упрощена архитектура pipeline
+
+### Technical Notes
+- Устранен конфликт между LengthFieldBasedFrameDecoder и BinaryMessageCodec
+- BinaryMessageCodec реализует собственный фрейминг согласно PROTOCOL_SPEC.md
+- Защита от DoS атак на уровне декодирования и кодирования
+- Все подозрительные попытки логируются с IP-адресом клиента
+
+---
+
 ## [1.0.1] - 2026-02-07
 
 ### Fix

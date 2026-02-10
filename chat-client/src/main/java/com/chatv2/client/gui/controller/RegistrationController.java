@@ -34,6 +34,8 @@ public class RegistrationController implements Initializable {
     @FXML private Label errorLabel;
 
     private ChatClient chatClient;
+
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(RegistrationController.class);
     private byte[] avatarData;
 
     @Override
@@ -274,5 +276,4 @@ public class RegistrationController implements Initializable {
         alert.showAndWait();
     }
 
-    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(RegistrationController.class);
 }

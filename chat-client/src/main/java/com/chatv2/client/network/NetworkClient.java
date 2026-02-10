@@ -1,26 +1,21 @@
 package com.chatv2.client.network;
 
+import com.chatv2.common.protocol.BinaryMessageCodec;
 import com.chatv2.common.protocol.ChatMessage;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
-import io.netty.handler.codec.LengthFieldPrepender;
-import io.netty.handler.codec.string.StringDecoder;
-import io.netty.handler.codec.string.StringEncoder;
-import io.netty.util.CharsetUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
 /**
- * Network client for TCP communication with server.
+ * Network client for TCP communication with server using binary protocol.
  */
 public class NetworkClient {
     private static final Logger log = LoggerFactory.getLogger(NetworkClient.class);
@@ -29,8 +24,24 @@ public class NetworkClient {
     private Channel channel;
     private Consumer<ChatMessage> messageHandler;
     private final ConcurrentHashMap<String, CompletableFuture<ChatMessage>> pendingRequests = new ConcurrentHashMap<>();
+    private final com.chatv2.client.network.EncryptionHandler encryptionHandler;
 
     public NetworkClient() {
+        this.encryptionHandler = new com.chatv2.client.network.EncryptionHandler(new EncryptionHandler.EncryptionService() {
+            @Override
+            public com.chatv2.common.crypto.EncryptionResult encrypt(byte[] plaintext, java.security.Key key) {
+                // Simple implementation for now
+                // TODO: Implement proper encryption
+                return new com.chatv2.common.crypto.EncryptionResult(plaintext, new byte[12], new byte[16]);
+            }
+
+            @Override
+            public byte[] decrypt(byte[] ciphertext, byte[] iv, byte[] tag, java.security.Key key) {
+                // Simple implementation for now
+                // TODO: Implement proper decryption
+                return ciphertext;
+            }
+        });
     }
 
     /**
@@ -47,24 +58,7 @@ public class NetworkClient {
                 .channel(NioSocketChannel.class)
                 .option(ChannelOption.TCP_NODELAY, true)
                 .option(ChannelOption.SO_KEEPALIVE, true)
-                .handler(new ChannelInitializer<SocketChannel>() {
-                    @Override
-                    protected void initChannel(SocketChannel ch) {
-                        ChannelPipeline pipeline = ch.pipeline();
-
-                        // Frame decoder/encoder
-                        pipeline.addLast("frameDecoder",
-                            new LengthFieldBasedFrameDecoder(10485760, 0, 4, 0, 0));
-                        pipeline.addLast("frameEncoder", new LengthFieldPrepender(4));
-
-                        // String decoder/encoder
-                        pipeline.addLast("stringDecoder", new StringDecoder(CharsetUtil.UTF_8));
-                        pipeline.addLast("stringEncoder", new StringEncoder(CharsetUtil.UTF_8));
-
-                        // Message handler
-                        pipeline.addLast("clientHandler", new ClientHandler(messageHandler, pendingRequests));
-                    }
-                });
+                .handler(new ClientInitializer(null, new ClientHandler(messageHandler, pendingRequests), encryptionHandler));
 
             // Connect to server
             ChannelFuture future = bootstrap.connect(host, port);
@@ -112,9 +106,12 @@ public class NetworkClient {
     }
 
     /**
-     * Sends a request to the server.
+     * Sends a binary message to the server.
+     *
+     * @param request the ChatMessage to send
+     * @return a CompletableFuture that will complete with the response message
      */
-    public CompletableFuture<ChatMessage> sendRequest(String request) {
+    public CompletableFuture<ChatMessage> sendRequest(ChatMessage request) {
         CompletableFuture<ChatMessage> responseFuture = new CompletableFuture<>();
 
         if (channel == null || !channel.isActive()) {
@@ -122,13 +119,12 @@ public class NetworkClient {
             return responseFuture;
         }
 
-        String requestId = java.util.UUID.randomUUID().toString();
+        String requestId = request.getMessageId().toString();
         pendingRequests.put(requestId, responseFuture);
 
-        String message = requestId + ":" + request;
-        channel.writeAndFlush(message);
+        channel.writeAndFlush(request);
 
-        log.debug("Sent request: {}", message);
+        log.debug("Sent request: type={}, id={}", request.getMessageType(), requestId);
 
         return responseFuture;
     }

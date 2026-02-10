@@ -1,6 +1,8 @@
 package com.chatv2.client.network;
 
 import com.chatv2.common.protocol.ChatMessage;
+import com.chatv2.common.protocol.ProtocolMessageType;
+import com.chatv2.common.protocol.BinaryMessageCodec;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import org.slf4j.Logger;
@@ -13,7 +15,7 @@ import java.util.function.Consumer;
 
 /**
  * Client message handler for Netty.
- * Handles incoming ChatMessage objects from the server.
+ * Handles incoming ChatMessage objects from the server using binary protocol.
  */
 public class ClientHandler extends SimpleChannelInboundHandler<ChatMessage> {
     private static final Logger log = LoggerFactory.getLogger(ClientHandler.class);
@@ -25,7 +27,7 @@ public class ClientHandler extends SimpleChannelInboundHandler<ChatMessage> {
      * Creates a new client handler.
      *
      * @param messageHandler the consumer for handling server-initiated messages
-     * @param pendingRequests the map of pending request IDs to futures
+     * @param pendingRequests the map of pending request message IDs to futures
      */
     public ClientHandler(Consumer<ChatMessage> messageHandler, Map<String, CompletableFuture<ChatMessage>> pendingRequests) {
         this.messageHandler = messageHandler;
@@ -45,30 +47,18 @@ public class ClientHandler extends SimpleChannelInboundHandler<ChatMessage> {
             log.debug("Received message: type={}, id={}, payloadSize={}",
                     msg.getMessageType(), msg.getMessageId(), msg.getPayload().length);
 
-            // Convert payload to string for request ID parsing
-            String payloadStr = new String(msg.getPayload(), StandardCharsets.UTF_8);
+            // Use message ID to match requests with responses
+            String messageId = msg.getMessageId().toString();
 
-            // Parse message for request ID (format: "requestId:payload")
-            String[] parts = payloadStr.split(":", 2);
-            if (parts.length >= 2) {
-                String requestId = parts[0];
-
-                // Check if this is a response to a pending request
-                CompletableFuture<ChatMessage> responseFuture = pendingRequests.remove(requestId);
-                if (responseFuture != null) {
-                    log.debug("Completing pending request: {}", requestId);
-                    responseFuture.complete(msg);
-                } else {
-                    // This is a server-initiated message
-                    if (messageHandler != null) {
-                        log.debug("Handling server-initiated message");
-                        messageHandler.accept(msg);
-                    }
-                }
+            // Check if this is a response to a pending request
+            CompletableFuture<ChatMessage> responseFuture = pendingRequests.remove(messageId);
+            if (responseFuture != null) {
+                log.debug("Completing pending request: {}", messageId);
+                responseFuture.complete(msg);
             } else {
-                // No request ID, treat as server message
+                // This is a server-initiated message
                 if (messageHandler != null) {
-                    log.debug("Handling server message without request ID");
+                    log.debug("Handling server-initiated message: type={}", msg.getMessageType());
                     messageHandler.accept(msg);
                 }
             }

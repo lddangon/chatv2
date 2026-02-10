@@ -2,19 +2,27 @@ package com.chatv2.client.core;
 
 import com.chatv2.client.network.NetworkClient;
 import com.chatv2.common.model.Message;
+import com.chatv2.common.model.Session;
+import com.chatv2.common.model.UserProfile;
 import com.chatv2.common.protocol.ChatMessage;
+import com.chatv2.common.protocol.MessageCodec;
+import com.chatv2.common.protocol.ProtocolMessageType;
+import com.chatv2.common.protocol.BinaryMessageCodec;
 import com.chatv2.common.util.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.nio.charset.StandardCharsets;
+import java.io.IOException;
+import java.time.Instant;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
 /**
- * Main chat client class.
+ * Main chat client class using binary protocol.
  */
 public class ChatClient {
     private static final Logger log = LoggerFactory.getLogger(ChatClient.class);
@@ -48,6 +56,23 @@ public class ChatClient {
         this.connectedServerPort = serverPort;
 
         log.info("Connecting to server {}:{}", serverHost, serverPort);
+
+        // Initialize message handler for receiving server-initiated messages
+        networkClient.setMessageHandler(message -> {
+            if (message.getMessageType() == ProtocolMessageType.MESSAGE_RECEIVE) {
+                try {
+                    String jsonPayload = new String(message.getPayload(), java.nio.charset.StandardCharsets.UTF_8);
+                    Message msg = MessageCodec.decode(jsonPayload, Message.class);
+
+                    // Notify consumers
+                    messageConsumers.values().forEach(msgConsumer -> msgConsumer.accept(msg));
+                } catch (IOException e) {
+                    log.error("Failed to parse incoming message", e);
+                } catch (Exception e) {
+                    log.error("Unexpected error processing incoming message", e);
+                }
+            }
+        });
 
         return networkClient.connect(serverHost, serverPort)
             .thenAccept(v -> {
@@ -97,21 +122,28 @@ public class ChatClient {
 
         log.debug("Sending message: {}", message.messageId());
 
-        String messageStr = String.format("MESSAGE_SEND:%s:%s:%s:%s",
-            message.chatId(),
-            message.senderId(),
-            message.content(),
-            message.messageType().name()
-        );
+        try {
+            byte[] payload = MessageCodec.encodeToBytes(message);
+            ChatMessage request = new ChatMessage(
+                ProtocolMessageType.MESSAGE_SEND_REQ,
+                (byte) 0x00,
+                message.messageId(),
+                System.currentTimeMillis(),
+                payload
+            );
 
-        return networkClient.sendRequest(messageStr)
-            .thenAccept(response -> {
-                log.debug("Message sent successfully: {}", message.messageId());
-            })
-            .exceptionally(ex -> {
-                log.error("Failed to send message: {}", message.messageId(), ex);
-                throw new RuntimeException("Failed to send message", ex);
-            });
+            return networkClient.sendRequest(request)
+                .thenAccept(response -> {
+                    log.debug("Message sent successfully: {}", message.messageId());
+                })
+                .exceptionally(ex -> {
+                    log.error("Failed to send message: {}", message.messageId(), ex);
+                    throw new RuntimeException("Failed to send message", ex);
+                });
+        } catch (Exception e) {
+            log.error("Failed to encode message", e);
+            return CompletableFuture.failedFuture(e);
+        }
     }
 
     /**
@@ -124,30 +156,53 @@ public class ChatClient {
 
         log.info("Authenticating user: {}", username);
 
-        String loginRequest = String.format("AUTH_LOGIN:%s:%s", username, password);
+        try {
+            // Create login request as JSON
+            Map<String, String> loginData = new HashMap<>();
+            loginData.put("username", username);
+            loginData.put("password", password);
+            byte[] payload = MessageCodec.encodeToBytes(loginData);
 
-        return networkClient.sendRequest(loginRequest)
-            .thenAccept(response -> {
-                String responseStr = new String(response.getPayload(), StandardCharsets.UTF_8);
-                if (responseStr.contains("SUCCESS")) {
-                    String[] parts = responseStr.split(":");
-                    if (parts.length >= 4) {
-                        currentUserId = UUID.fromString(parts[2]);
-                        currentToken = parts[3];
-                        setState(ConnectionState.AUTHENTICATED);
-                        log.info("Authentication successful for user: {}", username);
+            ChatMessage request = new ChatMessage(
+                ProtocolMessageType.AUTH_LOGIN_REQ,
+                (byte) 0x00,
+                UUID.randomUUID(),
+                System.currentTimeMillis(),
+                payload
+            );
+
+            return networkClient.sendRequest(request)
+                .thenAccept(response -> {
+                    if (response.getMessageType() == ProtocolMessageType.AUTH_LOGIN_RES) {
+                        try {
+                            // Deserialize Session from JSON payload
+                            String jsonPayload = new String(response.getPayload(), java.nio.charset.StandardCharsets.UTF_8);
+                            Session session = MessageCodec.decode(jsonPayload, Session.class);
+
+                            currentUserId = session.userId();
+                            currentToken = session.token();
+                            setState(ConnectionState.AUTHENTICATED);
+                            log.info("Authentication successful for user: {}", username);
+                        } catch (IOException e) {
+                            setState(ConnectionState.CONNECTED);
+                            log.warn("Failed to decode authentication response", e);
+                            throw new RuntimeException("Authentication failed: " + e.getMessage(), e);
+                        }
+                    } else {
+                        setState(ConnectionState.CONNECTED);
+                        log.warn("Authentication failed: unexpected response type {}", response.getMessageType());
+                        throw new RuntimeException("Authentication failed");
                     }
-                } else {
-                    setState(ConnectionState.CONNECTED);
-                    log.warn("Authentication failed: {}", responseStr);
-                    throw new RuntimeException("Authentication failed");
-                }
-            })
-            .exceptionally(ex -> {
-                setState(ConnectionState.ERROR);
-                log.error("Authentication error", ex);
-                throw new RuntimeException("Authentication error", ex);
-            });
+                })
+                .exceptionally(ex -> {
+                    setState(ConnectionState.ERROR);
+                    log.error("Authentication error", ex);
+                    throw new RuntimeException("Authentication error", ex);
+                });
+        } catch (Exception e) {
+            log.error("Failed to create login request", e);
+            return CompletableFuture.failedFuture(e);
+        }
     }
 
     /**
@@ -160,22 +215,36 @@ public class ChatClient {
 
         log.info("Registering new user: {}", username);
 
-        String registerRequest = String.format("AUTH_REGISTER:%s:%s:%s", username, password, fullName);
+        try {
+            // Create UserProfile for registration
+            UserProfile userProfile = UserProfile.createNew(username, password, "salt", fullName, null);
+            byte[] payload = MessageCodec.encodeToBytes(userProfile);
 
-        return networkClient.sendRequest(registerRequest)
-            .thenAccept(response -> {
-                String responseStr = new String(response.getPayload(), StandardCharsets.UTF_8);
-                if (responseStr.contains("SUCCESS")) {
-                    log.info("Registration successful for user: {}", username);
-                } else {
-                    log.warn("Registration failed: {}", responseStr);
-                    throw new RuntimeException("Registration failed");
-                }
-            })
-            .exceptionally(ex -> {
-                log.error("Registration error", ex);
-                throw new RuntimeException("Registration error", ex);
-            });
+            ChatMessage request = new ChatMessage(
+                ProtocolMessageType.AUTH_REGISTER_REQ,
+                (byte) 0x00,
+                UUID.randomUUID(),
+                System.currentTimeMillis(),
+                payload
+            );
+
+            return networkClient.sendRequest(request)
+                .thenAccept(response -> {
+                    if (response.getMessageType() == ProtocolMessageType.AUTH_REGISTER_RES) {
+                        log.info("Registration successful for user: {}", username);
+                    } else {
+                        log.warn("Registration failed: unexpected response type {}", response.getMessageType());
+                        throw new RuntimeException("Registration failed");
+                    }
+                })
+                .exceptionally(ex -> {
+                    log.error("Registration error", ex);
+                    throw new RuntimeException("Registration error", ex);
+                });
+        } catch (Exception e) {
+            log.error("Failed to create registration request", e);
+            return CompletableFuture.failedFuture(e);
+        }
     }
 
     /**
@@ -188,32 +257,23 @@ public class ChatClient {
 
         log.debug("Getting user profile for: {}", currentUserId);
 
-        String profileRequest = String.format("USER_GET_PROFILE:%s", currentUserId);
-        ChatMessage responseMsg = networkClient.sendRequest(profileRequest).get();
-        String response = new String(responseMsg.getPayload(), StandardCharsets.UTF_8);
+        byte[] payload = MessageCodec.encodeToBytes(currentUserId.toString());
+        ChatMessage request = new ChatMessage(
+            ProtocolMessageType.USER_GET_PROFILE_REQ,
+            (byte) 0x00,
+            UUID.randomUUID(),
+            System.currentTimeMillis(),
+            payload
+        );
 
-        if (response.contains("SUCCESS")) {
-            // Parse profile from response
-            // Format: SUCCESS:username:fullName:bio:status
-            String[] parts = response.split(":");
-            if (parts.length >= 5) {
-                String username = parts[1];
-                String fullName = parts[2];
-                String bio = parts[3];
-                com.chatv2.common.model.UserStatus status = com.chatv2.common.model.UserStatus.valueOf(parts[4]);
+        ChatMessage response = networkClient.sendRequest(request).get();
 
-                return new com.chatv2.common.model.UserProfile(
-                    currentUserId,
-                    username,
-                    null, // passwordHash
-                    null, // salt
-                    fullName,
-                    null, // avatarData
-                    bio,
-                    status,
-                    null, // createdAt
-                    null  // updatedAt
-                );
+        if (response.getMessageType() == ProtocolMessageType.USER_GET_PROFILE_RES) {
+            try {
+                String jsonPayload = new String(response.getPayload(), java.nio.charset.StandardCharsets.UTF_8);
+                return MessageCodec.decode(jsonPayload, com.chatv2.common.model.UserProfile.class);
+            } catch (IOException e) {
+                throw new RuntimeException("Failed to decode profile response", e);
             }
         }
 
@@ -230,23 +290,42 @@ public class ChatClient {
 
         log.debug("Updating profile for user: {}", currentUserId);
 
-        String avatarBase64 = avatarData != null ? java.util.Base64.getEncoder().encodeToString(avatarData) : "";
-        String updateRequest = String.format("USER_UPDATE_PROFILE:%s:%s:%s", fullName, bio, avatarBase64);
+        try {
+            // Create profile update request
+            Map<String, Object> updateData = new HashMap<>();
+            updateData.put("userId", currentUserId);
+            updateData.put("fullName", fullName);
+            updateData.put("bio", bio);
+            if (avatarData != null) {
+                updateData.put("avatarData", avatarData);
+            }
+            byte[] payload = MessageCodec.encodeToBytes(updateData);
 
-        return networkClient.sendRequest(updateRequest)
-            .thenAccept(response -> {
-                String responseStr = new String(response.getPayload(), StandardCharsets.UTF_8);
-                if (responseStr.contains("SUCCESS")) {
-                    log.info("Profile updated successfully");
-                } else {
-                    log.warn("Profile update failed: {}", responseStr);
-                    throw new RuntimeException("Profile update failed");
-                }
-            })
-            .exceptionally(ex -> {
-                log.error("Profile update error", ex);
-                throw new RuntimeException("Profile update error", ex);
-            });
+            ChatMessage request = new ChatMessage(
+                ProtocolMessageType.USER_UPDATE_PROFILE_REQ,
+                (byte) 0x00,
+                UUID.randomUUID(),
+                System.currentTimeMillis(),
+                payload
+            );
+
+            return networkClient.sendRequest(request)
+                .thenAccept(response -> {
+                    if (response.getMessageType() == ProtocolMessageType.USER_UPDATE_PROFILE_RES) {
+                        log.info("Profile updated successfully");
+                    } else {
+                        log.warn("Profile update failed: unexpected response type {}", response.getMessageType());
+                        throw new RuntimeException("Profile update failed");
+                    }
+                })
+                .exceptionally(ex -> {
+                    log.error("Profile update error", ex);
+                    throw new RuntimeException("Profile update error", ex);
+                });
+        } catch (Exception e) {
+            log.error("Failed to create profile update request", e);
+            return CompletableFuture.failedFuture(e);
+        }
     }
 
     /**
@@ -254,25 +333,17 @@ public class ChatClient {
      */
     public void setMessageConsumer(Consumer<Message> consumer) {
         networkClient.setMessageHandler(message -> {
-            String messageStr = new String(message.getPayload(), StandardCharsets.UTF_8);
-            if (messageStr.contains("MESSAGE_RECEIVE")) {
-                // Parse and deliver message
+            if (message.getMessageType() == ProtocolMessageType.MESSAGE_RECEIVE) {
                 try {
-                    String[] parts = messageStr.split(":");
-                    if (parts.length >= 5) {
-                        UUID chatId = UUID.fromString(parts[1]);
-                        UUID senderId = UUID.fromString(parts[2]);
-                        String content = parts[3];
-                        String messageType = parts.length > 4 ? parts[4] : "TEXT";
+                    String jsonPayload = new String(message.getPayload(), java.nio.charset.StandardCharsets.UTF_8);
+                    Message msg = MessageCodec.decode(jsonPayload, Message.class);
 
-                        Message msg = Message.createNew(chatId, senderId, content,
-                            com.chatv2.common.model.MessageType.fromString(messageType));
-
-                        // Notify consumers
-                        messageConsumers.values().forEach(msgConsumer -> msgConsumer.accept(msg));
-                    }
-                } catch (Exception e) {
+                    // Notify consumers
+                    messageConsumers.values().forEach(msgConsumer -> msgConsumer.accept(msg));
+                } catch (IOException e) {
                     log.error("Failed to parse incoming message", e);
+                } catch (Exception e) {
+                    log.error("Unexpected error processing incoming message", e);
                 }
             }
         });

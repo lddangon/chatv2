@@ -28,6 +28,53 @@ public class UserManager {
     }
 
     /**
+     * Registers a new user from UserProfile.
+     * Password should be plain text and will be hashed.
+     */
+    public CompletableFuture<UserProfile> register(UserProfile profile) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                log.debug("Registering new user: {}", profile.username());
+
+                // Check if user already exists
+                if (userRepository.findByUsername(profile.username()).isPresent()) {
+                    throw new com.chatv2.common.exception.ChatException(
+                        com.chatv2.common.exception.ChatException.USER_EXISTS,
+                        "Username already exists: " + profile.username()
+                    );
+                }
+
+                // Generate salt and hash password
+                String salt = com.chatv2.common.crypto.CryptoUtils.generateSalt();
+                String passwordHash = com.chatv2.common.crypto.CryptoUtils.hashPassword(profile.passwordHash(), salt);
+
+                // Create user profile with hashed password
+                UserProfile newProfile = new UserProfile(
+                    profile.userId() != null ? profile.userId() : java.util.UUID.randomUUID(),
+                    profile.username(),
+                    passwordHash,
+                    salt,
+                    profile.fullName(),
+                    profile.avatarData(),
+                    profile.bio(),
+                    profile.status() != null ? profile.status() : UserStatus.OFFLINE,
+                    profile.createdAt(),
+                    profile.updatedAt()
+                );
+
+                // Save to database
+                UserProfile savedProfile = userRepository.save(newProfile);
+                log.info("User registered successfully: {}", profile.username());
+
+                return savedProfile.toPublicProfile();
+            } catch (Exception e) {
+                log.error("Failed to register user: {}", profile.username(), e);
+                throw e;
+            }
+        }, executor);
+    }
+
+    /**
      * Registers a new user.
      */
     public CompletableFuture<UserProfile> register(String username, String password, String fullName, String bio) {

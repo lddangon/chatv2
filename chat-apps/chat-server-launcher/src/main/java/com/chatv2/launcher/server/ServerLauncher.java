@@ -9,6 +9,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import javafx.application.Application;
 
+import java.util.concurrent.CompletableFuture;
+
 /**
  * Server launcher application.
  * Supports both headless mode and GUI mode.
@@ -182,6 +184,93 @@ public class ServerLauncher {
         return new ServerConfig(host, port, name, databasePath, 10,
             encryptionRequired, 4096, 256,
             "239.255.255.250", 9999, true, 3600, 3600);
+    }
+
+    /**
+     * Starts the server in test mode.
+     * Designed for integration tests - initializes database, creates server, and starts it.
+     *
+     * @param config Server configuration
+     * @return CompletableFuture that completes when server is started or fails on error
+     */
+    public static CompletableFuture<Void> startTestServer(ServerConfig config) {
+        CompletableFuture<Void> result = new CompletableFuture<>();
+        
+        try {
+            // Initialize database
+            log.info("Initializing database for test mode: {}", config.getDatabasePath());
+            databaseManager = new DatabaseManager(config.getDatabasePath());
+            
+            // Create server initializer
+            ServerInitializer initializer = new ServerInitializer(databaseManager);
+            
+            // Create server
+            log.info("Creating test server on {}:{}", config.getHost(), config.getPort());
+            chatServer = new ChatServer(config, initializer);
+            
+            // Start server
+            chatServer.start()
+                .thenAccept(v -> {
+                    log.info("Test server started successfully on {}:{}", config.getHost(), config.getPort());
+                    result.complete(null);
+                })
+                .exceptionally(ex -> {
+                    log.error("Failed to start test server", ex);
+                    result.completeExceptionally(ex);
+                    return null;
+                });
+        } catch (Exception e) {
+            log.error("Error during test server initialization", e);
+            result.completeExceptionally(e);
+        }
+        
+        return result;
+    }
+    
+    /**
+     * Stops the test server.
+     * Designed for integration tests - stops server and closes database.
+     *
+     * @return CompletableFuture that completes when server is stopped or fails on error
+     */
+    public static CompletableFuture<Void> stopTestServer() {
+        CompletableFuture<Void> result = new CompletableFuture<>();
+        
+        try {
+            if (chatServer != null) {
+                log.info("Stopping test server...");
+                chatServer.stop()
+                    .thenAccept(v -> {
+                        log.info("Test server stopped successfully");
+                        result.complete(null);
+                    })
+                    .exceptionally(ex -> {
+                        log.error("Failed to stop test server", ex);
+                        result.completeExceptionally(ex);
+                        return null;
+                    });
+            } else {
+                log.warn("Test server was not running");
+                result.complete(null);
+            }
+        } catch (Exception e) {
+            log.error("Error during test server shutdown", e);
+            result.completeExceptionally(e);
+        } finally {
+            // Always close database
+            if (databaseManager != null) {
+                try {
+                    databaseManager.close();
+                    log.info("Database closed");
+                } catch (Exception e) {
+                    log.error("Error closing database", e);
+                }
+                databaseManager = null;
+            }
+            chatServer = null;
+        }
+        
+        return result;
     }
 
     /**
